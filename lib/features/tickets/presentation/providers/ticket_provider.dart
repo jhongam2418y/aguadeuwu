@@ -40,4 +40,17 @@ class TicketProvider extends ChangeNotifier {
     notifyListeners();
     return ticket;
   }
+
+  Future<void> anularTicket(int id) async {
+    await _repo.anularTicket(id);
+    final idx = _ticketsHoy.indexWhere((t) => t.id == id);
+    if (idx != -1) {
+      _ticketsHoy[idx] = _ticketsHoy[idx].copyWith(anulado: true);
+    }
+    notifyListeners();
+  }
+
+  Future<List<TicketModel>> obtenerTicketsPorRango(DateTime desde, DateTime hasta) {
+    return _repo.obtenerTicketsPorRango(desde, hasta);
+  }
 }

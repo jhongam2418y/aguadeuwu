@@ -54,7 +54,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                             style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 18,
-                                color: Color(0xFF0D1B2A))),
+                                color: Color(0xFF1A1A1A))),
                         Text('Resumen de operaciones recientes',
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey.shade500)),
@@ -167,7 +167,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                                       style: const TextStyle(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 14,
-                                          color: Color(0xFF0D1B2A))),
+                                          color: Color(0xFF1A1A1A))),
                                 ),
                                 Expanded(
                                   flex: 2,

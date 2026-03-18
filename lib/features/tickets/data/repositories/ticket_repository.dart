@@ -61,6 +61,33 @@ class TicketRepository {
     return rows.map(TicketModel.fromMap).toList();
   }
 
+  /// Marca un ticket como anulado.
+  Future<void> anularTicket(int id) async {
+    final db = await _db;
+    await db.update(
+      'tickets',
+      {'anulado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Devuelve tickets en un rango de fechas.
+  Future<List<TicketModel>> obtenerTicketsPorRango(DateTime desde, DateTime hasta) async {
+    final db = await _db;
+    final inicioStr = DateTime(desde.year, desde.month, desde.day).toIso8601String();
+    final finStr = DateTime(hasta.year, hasta.month, hasta.day, 23, 59, 59).toIso8601String();
+
+    final rows = await db.query(
+      'tickets',
+      where: 'hora BETWEEN ? AND ?',
+      whereArgs: [inicioStr, finStr],
+      orderBy: 'hora DESC',
+    );
+
+    return rows.map(TicketModel.fromMap).toList();
+  }
+
   /// Devuelve todos los tickets (histórico completo).
   Future<List<TicketModel>> obtenerTodos() async {
     final db = await _db;

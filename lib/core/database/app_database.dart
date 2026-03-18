@@ -18,7 +18,7 @@ class AppDatabase {
 
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -33,7 +33,8 @@ class AppDatabase {
         ninos     INTEGER NOT NULL,
         monto     REAL    NOT NULL,
         metodo_pago TEXT  NOT NULL DEFAULT 'efectivo',
-        hora      TEXT    NOT NULL
+        hora      TEXT    NOT NULL,
+        anulado   INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -43,13 +44,15 @@ class AppDatabase {
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Leer impresora antes de borrar
       final rows = await db.query('configuracion', where: 'id = 1');
       final impresora = rows.isNotEmpty ? (rows.first['nombre_impresora'] as String? ?? '') : '';
 
       await db.execute('DROP TABLE IF EXISTS configuracion');
       await _crearTablaConfiguracion(db);
       await _insertarConfigDefaults(db, nombreImpresora: impresora);
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE tickets ADD COLUMN anulado INTEGER NOT NULL DEFAULT 0');
     }
   }
 
@@ -89,5 +92,10 @@ class AppDatabase {
       'precio_nino_dom': 7.0,
       'nombre_impresora': nombreImpresora,
     });
+  }
+
+  Future<void> limpiarTickets() async {
+    final db = await database;
+    await db.delete('tickets');
   }
 }

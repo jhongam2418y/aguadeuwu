@@ -4,13 +4,14 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../../../configuracion/presentation/providers/config_provider.dart';
+import '../providers/ticket_provider.dart';
 
 class TicketPreviewScreen extends StatefulWidget {
   final int adultos, ninos;
-  final double precioAdulto, precioNino, total, montoEntregado, vuelto;
+  final double precioAdulto, precioNino, total;
   final String metodoPago;
   final VoidCallback onSalir;
-  final Future<void> Function() onGuardar;
+  final Future<int> Function() onGuardar;
 
   const TicketPreviewScreen({
     super.key,
@@ -20,8 +21,6 @@ class TicketPreviewScreen extends StatefulWidget {
     required this.precioNino,
     required this.total,
     required this.metodoPago,
-    required this.montoEntregado,
-    required this.vuelto,
     required this.onSalir,
     required this.onGuardar,
   });
@@ -32,14 +31,13 @@ class TicketPreviewScreen extends StatefulWidget {
 
 class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
   bool _guardado = false;
+  int? _ticketDbId;
 
   int get adultos => widget.adultos;
   int get ninos => widget.ninos;
   double get precioAdulto => widget.precioAdulto;
   double get precioNino => widget.precioNino;
   double get total => widget.total;
-  double get montoEntregado => widget.montoEntregado;
-  double get vuelto => widget.vuelto;
   String get metodoPago => widget.metodoPago;
 
   String get _fecha {
@@ -109,15 +107,9 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
               pw.SizedBox(height: 4),
               pdfRow('TOTAL:', 'S/ ${total.toStringAsFixed(2)}',
                   bold: true, fontSize: 16),
-              if (metodoPago == 'efectivo') ...[
-                pw.SizedBox(height: 4),
-                pw.Divider(thickness: 0.5),
-                pw.SizedBox(height: 4),
-                pdfRow('Efectivo:',
-                    'S/ ${montoEntregado.toStringAsFixed(2)}'),
-                pw.SizedBox(height: 3),
-                pdfRow('Vuelto:', 'S/ ${vuelto.toStringAsFixed(2)}'),
-              ],
+              pw.SizedBox(height: 4),
+              pw.Text('Pago: ${metodoPago[0].toUpperCase()}${metodoPago.substring(1)}',
+                  style: const pw.TextStyle(fontSize: 10)),
               pw.SizedBox(height: 8),
               pw.Divider(thickness: 0.5),
               pw.SizedBox(height: 6),
@@ -131,9 +123,51 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
     return pdf;
   }
 
+  Future<void> _confirmarAnulacion(BuildContext context) async {
+    if (!_guardado) {
+      widget.onSalir();
+      Navigator.pop(context);
+      return;
+    }
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Anular Ticket'),
+        content: const Text(
+            'Este ticket ya fue guardado. ¿Desea anularlo? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Anular'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar == true && _ticketDbId != null && mounted) {
+      await context.read<TicketProvider>().anularTicket(_ticketDbId!);
+      if (!context.mounted) return; 
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Ticket anulado correctamente'),
+          backgroundColor: Colors.red,
+        ));
+        widget.onSalir();
+        Navigator.of(context).popUntil((r) => r.isFirst);
+      }
+    }
+  }
+
   Future<void> _imprimir(BuildContext context) async {
     if (!_guardado) {
-      await widget.onGuardar();
+      _ticketDbId = await widget.onGuardar();
       setState(() => _guardado = true);
     }
     final pdf = await _buildPdf();
@@ -152,7 +186,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Barra superior ────────────────────────────────────────
+
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -175,12 +209,12 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
               ),
             ),
 
-            // ── Cuerpo: ticket izquierda | acciones derecha ───────────
+
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Panel izquierdo: ticket flotante ─────────────────
+
                   Expanded(
                     flex: 60,
                     child: Container(
@@ -206,7 +240,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                     ),
                   ),
 
-                  // ── Panel derecho: acciones ──────────────────────────
+
                   Expanded(
                     flex: 40,
                     child: Padding(
@@ -240,7 +274,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                                       style: TextStyle(
                                           fontSize: 17,
                                           fontWeight: FontWeight.w800,
-                                          color: Color(0xFF0D1B3E))),
+                                          color: Color(0xFF1A1A1A))),
                                 ]),
                                 const SizedBox(height: 20),
                                 // Imprimir Ticket
@@ -290,15 +324,12 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                                 const SizedBox(height: 14),
                                 // Anular / Cancelar
                                 OutlinedButton.icon(
-                                  onPressed: () {
-                                    widget.onSalir();
-                                    Navigator.of(context)
-                                        .popUntil((r) => r.isFirst);
-                                  },
+                                  onPressed: () => _confirmarAnulacion(context),
                                   icon: Icon(Icons.close_rounded,
                                       color: Colors.red.shade600, size: 22),
-                                  label: const Text('Anular / Cancelar',
-                                      style: TextStyle(
+                                  label: Text(
+                                      _guardado ? 'Anular Ticket' : 'Cancelar',
+                                      style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700)),
                                   style: OutlinedButton.styleFrom(
@@ -321,8 +352,8 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                           // Volver al Panel Principal
                           _DashedButton(
                             onTap: () {
-                              if (!_guardado) widget.onSalir();
-                              Navigator.pop(context);
+                              widget.onSalir();
+                              Navigator.of(context).popUntil((r) => r.isFirst);
                             },
                           ),
 
@@ -378,7 +409,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                                         style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w800,
-                                            color: Color(0xFF0D1B3E))),
+                                            color: Color(0xFF1A1A1A))),
                                     Text(
                                       conectado
                                           ? 'Conectado y listo'
@@ -408,7 +439,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
   }
 }
 
-// ─── Ticket card flotante ────────────────────────────────────────────────────
+
 
 class _TicketCard extends StatelessWidget {
   final int adultos, ninos;
@@ -430,7 +461,7 @@ class _TicketCard extends StatelessWidget {
     return SizedBox(
       child: Column(
         children: [
-          // ── Recibo papel ─────────────────────────────────────────────
+
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -552,7 +583,7 @@ class _TicketCard extends StatelessWidget {
               ],
             ),
           ),
-          // ── Borde dentado inferior (simulado con gradiente punteado) ─
+
           ClipRect(
             child: SizedBox(
               height: 14,
@@ -617,7 +648,7 @@ class _BarcodePainter extends CustomPainter {
   bool shouldRepaint(_BarcodePainter old) => false;
 }
 
-// ─── Botón "Volver" con borde punteado ──────────────────────────────────────
+
 
 class _DashedButton extends StatelessWidget {
   final VoidCallback onTap;
@@ -683,7 +714,7 @@ class _DashedBorderPainter extends CustomPainter {
   bool shouldRepaint(_DashedBorderPainter old) => false;
 }
 
-// ─── Fila del ticket ─────────────────────────────────────────────────────────
+
 
 class _TicketRow extends StatelessWidget {
   final String label, value;

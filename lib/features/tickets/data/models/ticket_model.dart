@@ -6,6 +6,7 @@ class TicketModel {
   final double monto;
   final String metodoPago;
   final DateTime hora;
+  final bool anulado;
 
   const TicketModel({
     required this.id,
@@ -15,7 +16,21 @@ class TicketModel {
     required this.monto,
     required this.metodoPago,
     required this.hora,
+    this.anulado = false,
   });
+
+  TicketModel copyWith({bool? anulado}) {
+    return TicketModel(
+      id: id,
+      ticketId: ticketId,
+      adultos: adultos,
+      ninos: ninos,
+      monto: monto,
+      metodoPago: metodoPago,
+      hora: hora,
+      anulado: anulado ?? this.anulado,
+    );
+  }
 
   factory TicketModel.fromMap(Map<String, dynamic> map) {
     return TicketModel(
@@ -26,6 +41,7 @@ class TicketModel {
       monto: (map['monto'] as num).toDouble(),
       metodoPago: map['metodo_pago'] as String,
       hora: DateTime.parse(map['hora'] as String),
+      anulado: (map['anulado'] as int? ?? 0) == 1,
     );
   }
 
@@ -37,6 +53,7 @@ class TicketModel {
       'monto': monto,
       'metodo_pago': metodoPago,
       'hora': hora.toIso8601String(),
+      'anulado': anulado ? 1 : 0,
     };
   }
 }

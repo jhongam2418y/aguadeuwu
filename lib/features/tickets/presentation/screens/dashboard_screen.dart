@@ -24,8 +24,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  bool get _esFinde => DateTime.now().weekday >= 6;
-
   Future<void> _irABoleteria() async {
     await Navigator.push(
       context,
@@ -39,19 +37,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final provider = context.watch<TicketProvider>();
     final cfg = context.watch<ConfigProvider>();
     final tickets = provider.ticketsHoy;
-    final totalIngresos = tickets.fold<double>(0, (s, t) => s + t.monto);
+    final ticketsActivos = tickets.where((t) => !t.anulado).toList();
+    final totalIngresos = ticketsActivos.fold<double>(0, (s, t) => s + t.monto);
 
-    final String diaLabel = _esFinde ? 'Fin de semana' : 'Día de semana';
+    final String diaLabel = DateFormat('EEEE', 'es').format(DateTime.now());
     final String fechaHoy =
         DateFormat("EEEE d 'de' MMMM", 'es').format(DateTime.now());
     final String diaLabelUpper = diaLabel.toUpperCase();
+    final bool esFinde = DateTime.now().weekday >= 6;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F7FF),
       body: SafeArea(
         child: Column(
           children: [
-            // ─── Top bar — ancho completo ─────────────────────────────
+            //  Top bar  ancho completo 
             _TopBar(
               onSettingsTap: () => Navigator.push(
                 context,
@@ -60,7 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
-            // ─── Contenido principal ──────────────────────────────────
+            //  Contenido principal 
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -80,14 +80,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             iconColor: const Color(0xFF0052CC),
                             bgColor: const Color(0xFFE3F0FF),
                             label: 'Tickets Hoy',
-                            value: '${tickets.length}',
+                            value: '${ticketsActivos.length}',
                           ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: _StatCard(
                             icon: Icons.payments_rounded,
-                            iconColor: const Color(0xFF2E7D32),
+                            iconColor: const Color(0xFF21BA45),
                             bgColor: const Color(0xFFE8F5E9),
                             label: 'Ingresos Hoy',
                             value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
@@ -98,14 +98,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 14),
 
                     // Precios del día
-                    _PreciosCard(cfg: cfg, esFinde: _esFinde),
+                    _PreciosCard(cfg: cfg, esFinde: esFinde),
                     const SizedBox(height: 24),
 
                     // Botón Nuevo Ticket centrado
                     _NuevoTicketButton(onTap: _irABoleteria),
                     const SizedBox(height: 24),
 
-                    // ─── Historial integrado ──────────────────────────
+                    //  Historial integrado 
                     _HistorialInline(
                       tickets: tickets,
                       cargando: provider.cargando,
@@ -121,7 +121,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// ─── Top bar ─────────────────────────────────────────────────────────────────
+//  Top bar 
 
 class _TopBar extends StatelessWidget {
   final VoidCallback onSettingsTap;
@@ -181,7 +181,7 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-// ─── Greeting ─────────────────────────────────────────────────────────────────
+//  Greeting 
 
 class _Greeting extends StatelessWidget {
   final String fecha;
@@ -197,7 +197,7 @@ class _Greeting extends StatelessWidget {
             style: TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.w900,
-                color: Color(0xFF0D1B3E))),
+                color: Color(0xFF1A1A1A))),
         const SizedBox(height: 6),
         Row(
           children: [
@@ -226,7 +226,7 @@ class _Greeting extends StatelessWidget {
   }
 }
 
-// ─── Stat card ────────────────────────────────────────────────────────────────
+//  Stat card 
 
 class _StatCard extends StatelessWidget {
   final IconData icon;
@@ -283,7 +283,7 @@ class _StatCard extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF0D1B3E))),
+                        color: Color(0xFF1A1A1A))),
               ],
             ),
           ),
@@ -293,7 +293,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ─── Precios del día ─────────────────────────────────────────────────────────
+//  Precios del día 
 
 class _PreciosCard extends StatelessWidget {
   final ConfigProvider cfg;
@@ -302,8 +302,9 @@ class _PreciosCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final adulto = cfg.precioAdulto(esFinde ? 6 : 1);
-    final nino = cfg.precioNino(esFinde ? 6 : 1);
+    final weekday = DateTime.now().weekday;
+    final adulto = cfg.precioAdulto(weekday);
+    final nino = cfg.precioNino(weekday);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -378,7 +379,7 @@ class _TarifaItem extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0D1B3E))),
+                    color: Color(0xFF1A1A1A))),
           ],
         ),
       ],
@@ -386,7 +387,7 @@ class _TarifaItem extends StatelessWidget {
   }
 }
 
-// ─── Botón Nuevo Ticket ───────────────────────────────────────────────────────
+//  Botón Nuevo Ticket 
 
 class _NuevoTicketButton extends StatelessWidget {
   final VoidCallback onTap;
@@ -440,7 +441,7 @@ class _NuevoTicketButton extends StatelessWidget {
   }
 }
 
-// ─── Historial integrado ──────────────────────────────────────────────────────
+//  Historial integrado 
 
 class _HistorialInline extends StatelessWidget {
   final List<TicketModel> tickets;
@@ -463,7 +464,7 @@ class _HistorialInline extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF0D1B3E),
+                      color: Color(0xFF1A1A1A),
                       letterSpacing: 0.5)),
             ),
             Container(
@@ -536,118 +537,171 @@ class _TicketItem extends StatelessWidget {
   final TicketModel ticket;
   const _TicketItem({required this.ticket});
 
-  @override
-  Widget build(BuildContext context) {
-    final hora =
-        DateFormat('HH:mm').format(ticket.hora);
-    final totalPax = ticket.adultos + ticket.ninos;
-    final esEfectivo = ticket.metodoPago == 'efectivo';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: const Color(0xFF0052CC).withValues(alpha: 0.07),
-              blurRadius: 8,
-              offset: const Offset(0, 3))
+  Future<void> _confirmarAnulacion(BuildContext context) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Anular Ticket'),
+        content: Text(
+            '¿Desea anular el ticket #${ticket.ticketId}? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Anular'),
+          ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            // Ticket ID badge
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE3F0FF),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '#${ticket.ticketId.toString().padLeft(4, '0')}',
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0052CC)),
-              ),
-            ),
-            const SizedBox(width: 12),
+    );
+    if (confirmar == true && context.mounted) {
+      await context.read<TicketProvider>().anularTicket(ticket.id);
+    }
+  }
 
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+  @override
+  Widget build(BuildContext context) {
+    final hora = DateFormat('HH:mm').format(ticket.hora);
+    final totalPax = ticket.adultos + ticket.ninos;
+    final esEfectivo = ticket.metodoPago == 'efectivo';
+    final anulado = ticket.anulado;
+
+    return GestureDetector(
+      onLongPress: anulado ? null : () => _confirmarAnulacion(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: anulado ? const Color(0xFFFFF0F0) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+                color: (anulado ? Colors.red : const Color(0xFF0052CC))
+                    .withValues(alpha: 0.07),
+                blurRadius: 8,
+                offset: const Offset(0, 3))
+          ],
+          border: anulado
+              ? Border.all(color: Colors.red.shade200, width: 1)
+              : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              // Ticket ID badge
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: anulado
+                      ? Colors.red.shade50
+                      : const Color(0xFFE3F0FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '#${ticket.ticketId.toString().padLeft(4, '0')}',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: anulado
+                          ? Colors.red.shade400
+                          : const Color(0xFF0052CC)),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _paxLabel(ticket.adultos, ticket.ninos),
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: anulado
+                              ? Colors.grey.shade400
+                              : const Color(0xFF1A1A1A),
+                          decoration:
+                              anulado ? TextDecoration.lineThrough : null),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time_rounded,
+                            size: 11, color: Colors.grey.shade400),
+                        const SizedBox(width: 3),
+                        Text(hora,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade500)),
+                        const SizedBox(width: 8),
+                        Icon(
+                          esEfectivo
+                              ? Icons.money_rounded
+                              : Icons.phone_android_rounded,
+                          size: 11,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          ticket.metodoPago[0].toUpperCase() +
+                              ticket.metodoPago.substring(1),
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade500),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Monto + badge
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    _paxLabel(ticket.adultos, ticket.ninos),
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF0D1B3E)),
+                    'S/ ${ticket.monto.toStringAsFixed(2)}',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: anulado
+                            ? Colors.grey.shade400
+                            : const Color(0xFF1A1A1A),
+                        decoration:
+                            anulado ? TextDecoration.lineThrough : null),
                   ),
                   const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time_rounded,
-                          size: 11, color: Colors.grey.shade400),
-                      const SizedBox(width: 3),
-                      Text(hora,
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade500)),
-                      const SizedBox(width: 8),
-                      Icon(
-                        esEfectivo
-                            ? Icons.money_rounded
-                            : Icons.credit_card_rounded,
-                        size: 11,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        esEfectivo ? 'Efectivo' : 'Transferencia',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade500),
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: anulado
+                          ? Colors.red.shade50
+                          : const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      anulado ? 'ANULADO' : '$totalPax pax',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: anulado
+                              ? Colors.red.shade400
+                              : const Color(0xFF21BA45)),
+                    ),
                   ),
                 ],
               ),
-            ),
-
-            // Monto + pax count
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  'S/ ${ticket.monto.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0D1B3E)),
-                ),
-                const SizedBox(height: 2),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '$totalPax pax',
-                    style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF2E7D32)),
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

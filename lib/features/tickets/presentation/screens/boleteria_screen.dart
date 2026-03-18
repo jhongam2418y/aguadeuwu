@@ -14,8 +14,6 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   int adultos = 0;
   int ninos = 0;
   String metodoPago = 'efectivo';
-  final TextEditingController _montoCtrl = TextEditingController();
-  double _vuelto = 0;
 
   double _precioAdulto(ConfigProvider cfg) =>
       cfg.precioAdulto(DateTime.now().weekday);
@@ -26,19 +24,11 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   double _total(ConfigProvider cfg) =>
       adultos * _precioAdulto(cfg) + ninos * _precioNino(cfg);
 
-  @override
-  void dispose() {
-    _montoCtrl.dispose();
-    super.dispose();
-  }
-
   void _resetear() {
     setState(() {
       adultos = 0;
       ninos = 0;
       metodoPago = 'efectivo';
-      _montoCtrl.clear();
-      _vuelto = 0;
     });
   }
 
@@ -56,15 +46,16 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
           precioNino: _precioNino(cfg),
           total: _total(cfg),
           metodoPago: metodoPago,
-          montoEntregado: double.tryParse(_montoCtrl.text) ?? 0,
-          vuelto: _vuelto,
           onSalir: _resetear,
-          onGuardar: () => provider.agregarTicket(
-            adultos: adultos,
-            ninos: ninos,
-            monto: _total(cfg),
-            metodoPago: metodoPago,
-          ),
+          onGuardar: () async {
+            final ticket = await provider.agregarTicket(
+              adultos: adultos,
+              ninos: ninos,
+              monto: _total(cfg),
+              metodoPago: metodoPago,
+            );
+            return ticket.id;
+          },
         ),
       ),
     );
@@ -121,11 +112,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
                           const SizedBox(height: 10),
                           _SelectorPago(
                             seleccionado: metodoPago,
-                            onChanged: (v) => setState(() {
-                              metodoPago = v;
-                              _vuelto = 0;
-                              _montoCtrl.clear();
-                            }),
+                            onChanged: (v) => setState(() => metodoPago = v),
                           ),
                           const SizedBox(height: 8),
                         ],

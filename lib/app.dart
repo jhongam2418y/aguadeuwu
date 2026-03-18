@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'features/configuracion/presentation/providers/config_provider.dart';
 import 'features/tickets/presentation/providers/ticket_provider.dart';
@@ -17,6 +18,13 @@ class PiscigranjaApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Piscigranja — Boletería',
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('es')],
+        locale: const Locale('es'),
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF003D99),
