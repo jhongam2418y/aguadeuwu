@@ -19,7 +19,7 @@ class PiscigranjaApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF0D47A1),
+            seedColor: const Color(0xFF003D99),
             brightness: Brightness.light,
           ),
           useMaterial3: true,

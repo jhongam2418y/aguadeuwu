@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/ticket_provider.dart';
-import '../widgets/app_drawer.dart';
 
 class HistorialScreen extends StatefulWidget {
   const HistorialScreen({super.key});
@@ -10,8 +9,6 @@ class HistorialScreen extends StatefulWidget {
 }
 
 class _HistorialScreenState extends State<HistorialScreen> {
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
-
   @override
   void initState() {
     super.initState();
@@ -27,9 +24,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
     final total = registros.length;
 
     return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF8FAFF),
-      drawer: AppDrawer(pantalla: 'historial'),
+      backgroundColor: const Color(0xFFF0F7FF),
       body: SafeArea(
         child: Column(
           children: [
@@ -47,7 +42,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.arrow_back_rounded,
-                          size: 20, color: Color(0xFF1565C0)),
+                          size: 20, color: Color(0xFF0052CC)),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -81,19 +76,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF3B6FD4))),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F4FF),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.menu_rounded,
-                          size: 20, color: Color(0xFF1565C0)),
-                    ),
-                  ),
+
                 ],
               ),
             ),

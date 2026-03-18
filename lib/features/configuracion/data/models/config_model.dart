@@ -1,59 +1,65 @@
 class ConfigModel {
-  final double precioAdultoSemana;
-  final double precioAdultoFinde;
-  final double precioNinoSemana;
-  final double precioNinoFinde;
+  /// Precios por día: índice 0 = Lunes, 1 = Martes, ..., 6 = Domingo
+  final List<double> preciosAdulto;
+  final List<double> preciosNino;
   final String nombreImpresora;
 
+  static const List<String> nombresDias = [
+    'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
+  ];
+
+  static const _adultoCols = [
+    'precio_adulto_lun', 'precio_adulto_mar', 'precio_adulto_mie',
+    'precio_adulto_jue', 'precio_adulto_vie', 'precio_adulto_sab',
+    'precio_adulto_dom',
+  ];
+  static const _ninoCols = [
+    'precio_nino_lun', 'precio_nino_mar', 'precio_nino_mie',
+    'precio_nino_jue', 'precio_nino_vie', 'precio_nino_sab',
+    'precio_nino_dom',
+  ];
+
   const ConfigModel({
-    required this.precioAdultoSemana,
-    required this.precioAdultoFinde,
-    required this.precioNinoSemana,
-    required this.precioNinoFinde,
+    required this.preciosAdulto,
+    required this.preciosNino,
     required this.nombreImpresora,
   });
 
-  factory ConfigModel.defaults() => const ConfigModel(
-        precioAdultoSemana: 8.0,
-        precioAdultoFinde: 10.0,
-        precioNinoSemana: 5.0,
-        precioNinoFinde: 7.0,
+  factory ConfigModel.defaults() => ConfigModel(
+        preciosAdulto: [8.0, 8.0, 8.0, 8.0, 8.0, 10.0, 10.0],
+        preciosNino:   [5.0, 5.0, 5.0, 5.0, 5.0,  7.0,  7.0],
         nombreImpresora: '',
       );
 
+  /// weekday: 1 = Lunes … 7 = Domingo (DateTime.weekday)
+  double precioAdultoDia(int weekday) => preciosAdulto[(weekday - 1) % 7];
+  double precioNinoDia(int weekday)   => preciosNino[(weekday - 1) % 7];
+
   factory ConfigModel.fromMap(Map<String, dynamic> map) {
     return ConfigModel(
-      precioAdultoSemana: (map['precio_adulto_semana'] as num).toDouble(),
-      precioAdultoFinde: (map['precio_adulto_finde'] as num).toDouble(),
-      precioNinoSemana: (map['precio_nino_semana'] as num).toDouble(),
-      precioNinoFinde: (map['precio_nino_finde'] as num).toDouble(),
+      preciosAdulto: _adultoCols.map((c) => (map[c] as num).toDouble()).toList(),
+      preciosNino:   _ninoCols.map((c) => (map[c] as num).toDouble()).toList(),
       nombreImpresora: map['nombre_impresora'] as String,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': 1,
-      'precio_adulto_semana': precioAdultoSemana,
-      'precio_adulto_finde': precioAdultoFinde,
-      'precio_nino_semana': precioNinoSemana,
-      'precio_nino_finde': precioNinoFinde,
-      'nombre_impresora': nombreImpresora,
-    };
+    final m = <String, dynamic>{'id': 1, 'nombre_impresora': nombreImpresora};
+    for (var i = 0; i < 7; i++) {
+      m[_adultoCols[i]] = preciosAdulto[i];
+      m[_ninoCols[i]]   = preciosNino[i];
+    }
+    return m;
   }
 
   ConfigModel copyWith({
-    double? precioAdultoSemana,
-    double? precioAdultoFinde,
-    double? precioNinoSemana,
-    double? precioNinoFinde,
+    List<double>? preciosAdulto,
+    List<double>? preciosNino,
     String? nombreImpresora,
   }) {
     return ConfigModel(
-      precioAdultoSemana: precioAdultoSemana ?? this.precioAdultoSemana,
-      precioAdultoFinde: precioAdultoFinde ?? this.precioAdultoFinde,
-      precioNinoSemana: precioNinoSemana ?? this.precioNinoSemana,
-      precioNinoFinde: precioNinoFinde ?? this.precioNinoFinde,
+      preciosAdulto:   preciosAdulto   ?? this.preciosAdulto,
+      preciosNino:     preciosNino     ?? this.preciosNino,
       nombreImpresora: nombreImpresora ?? this.nombreImpresora,
     );
   }

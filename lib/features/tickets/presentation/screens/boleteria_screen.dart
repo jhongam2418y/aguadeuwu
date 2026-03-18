@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../configuracion/presentation/providers/config_provider.dart';
 import '../providers/ticket_provider.dart';
@@ -17,27 +16,15 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   String metodoPago = 'efectivo';
   final TextEditingController _montoCtrl = TextEditingController();
   double _vuelto = 0;
-  bool _montoInsuficiente = false;
-  bool _ticketRegistrado = false;
-
-  bool get _esFinde => DateTime.now().weekday >= 6;
 
   double _precioAdulto(ConfigProvider cfg) =>
-      _esFinde ? cfg.precioAdultoFinde : cfg.precioAdultoSemana;
+      cfg.precioAdulto(DateTime.now().weekday);
 
   double _precioNino(ConfigProvider cfg) =>
-      _esFinde ? cfg.precioNinoFinde : cfg.precioNinoSemana;
+      cfg.precioNino(DateTime.now().weekday);
 
   double _total(ConfigProvider cfg) =>
       adultos * _precioAdulto(cfg) + ninos * _precioNino(cfg);
-
-  void _calcularVuelto(ConfigProvider cfg) {
-    final monto = double.tryParse(_montoCtrl.text) ?? 0;
-    setState(() {
-      _vuelto = monto - _total(cfg);
-      _montoInsuficiente = monto > 0 && _vuelto < 0;
-    });
-  }
 
   @override
   void dispose() {
@@ -52,23 +39,13 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
       metodoPago = 'efectivo';
       _montoCtrl.clear();
       _vuelto = 0;
-      _montoInsuficiente = false;
-      _ticketRegistrado = false;
     });
   }
 
   Future<void> _irAPreview(ConfigProvider cfg) async {
     if (adultos + ninos == 0) return;
-    if (!_ticketRegistrado) {
-      await context.read<TicketProvider>().agregarTicket(
-            adultos: adultos,
-            ninos: ninos,
-            monto: _total(cfg),
-            metodoPago: metodoPago,
-          );
-      _ticketRegistrado = true;
-    }
     if (!mounted) return;
+    final provider = context.read<TicketProvider>();
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -82,6 +59,12 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
           montoEntregado: double.tryParse(_montoCtrl.text) ?? 0,
           vuelto: _vuelto,
           onSalir: _resetear,
+          onGuardar: () => provider.agregarTicket(
+            adultos: adultos,
+            ninos: ninos,
+            monto: _total(cfg),
+            metodoPago: metodoPago,
+          ),
         ),
       ),
     );
@@ -101,61 +84,93 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
           children: [
             _Header(onBackTap: () => Navigator.pop(context)),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _ContadorCard(
-                      label: 'Adultos',
-                      precio: precioAdulto,
-                      icono: Icons.person_rounded,
-                      valor: adultos,
-                      onChanged: (v) => setState(() {
-                        adultos = v;
-                        _ticketRegistrado = false;
-                      }),
-                    ),
-                    const SizedBox(height: 12),
-                    _ContadorCard(
-                      label: 'Niños',
-                      precio: precioNino,
-                      icono: Icons.child_care_rounded,
-                      valor: ninos,
-                      onChanged: (v) => setState(() {
-                        ninos = v;
-                        _ticketRegistrado = false;
-                      }),
-                    ),
-                    const SizedBox(height: 20),
-                    const _SectionLabel(texto: 'Método de Pago'),
-                    const SizedBox(height: 10),
-                    _SelectorPago(
-                      seleccionado: metodoPago,
-                      onChanged: (v) => setState(() {
-                        metodoPago = v;
-                        _vuelto = 0;
-                        _montoInsuficiente = false;
-                        _montoCtrl.clear();
-                      }),
-                    ),
-                    if (metodoPago == 'efectivo') ...[
-                      const SizedBox(height: 14),
-                      _EfectivoCard(
-                        controller: _montoCtrl,
-                        vuelto: _vuelto,
-                        insuficiente: _montoInsuficiente,
-                        onChanged: (_) => _calcularVuelto(cfg),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Panel izquierdo: selectores ──────────────────────────
+                  Expanded(
+                    flex: 3,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const _SectionLabel(texto: 'SELECCIONE CANTIDAD'),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: _ContadorCard(
+                              label: 'Adultos',
+                              precio: precioAdulto,
+                              icono: Icons.person_rounded,
+                              valor: adultos,
+                              onChanged: (v) => setState(() => adultos = v),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: _ContadorCard(
+                              label: 'Niños',
+                              precio: precioNino,
+                              icono: Icons.child_care_rounded,
+                              valor: ninos,
+                              onChanged: (v) => setState(() => ninos = v),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const _SectionLabel(texto: 'MÉTODO DE PAGO'),
+                          const SizedBox(height: 10),
+                          _SelectorPago(
+                            seleccionado: metodoPago,
+                            onChanged: (v) => setState(() {
+                              metodoPago = v;
+                              _vuelto = 0;
+                              _montoCtrl.clear();
+                            }),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                       ),
-                    ],
-                    const SizedBox(height: 20),
-                    _TotalCard(adultos: adultos, ninos: ninos, total: total),
-                    const SizedBox(height: 8),
-                  ],
-                ),
+                    ),
+                  ),
+                  // ── Divisor ──────────────────────────────────────────────
+                  Container(
+                    width: 1,
+                    color: const Color(0xFFCCE0FF),
+                    margin: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  // ── Panel derecho: vista previa ──────────────────────────
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 20, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const _SectionLabel(texto: 'VISTA PREVIA DEL TICKET'),
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: _TicketPreviewCard(
+                                adultos: adultos,
+                                ninos: ninos,
+                                precioAdulto: precioAdulto,
+                                precioNino: precioNino,
+                                total: total,
+                                metodoPago: metodoPago,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            _BotonGuardar(
+            _BottomBar(
+              adultos: adultos,
+              ninos: ninos,
+              total: total,
               habilitado: adultos + ninos > 0,
               onTap: () => _irAPreview(cfg),
             ),
@@ -178,63 +193,62 @@ class _Header extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
+          colors: [Color(0xFF0052CC), Color(0xFF003D99)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-      child: Stack(
-        alignment: Alignment.center,
+      padding: const EdgeInsets.fromLTRB(8, 12, 20, 12),
+      child: Row(
         children: [
+          IconButton(
+            onPressed: onBackTap,
+            icon: const Icon(Icons.arrow_back_rounded,
+                color: Colors.white, size: 28),
+            tooltip: 'Volver',
+          ),
+          const SizedBox(width: 4),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('NUEVO TICKET',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1)),
+                Text('Emisión de comprobante de ingreso',
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+              ],
+            ),
+          ),
           Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.water_rounded,
-                      color: Colors.white.withValues(alpha: 0.85), size: 26),
-                  const SizedBox(width: 8),
-                  const Text('PISCIGRANJA',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 3)),
-                  const SizedBox(width: 8),
-                  Icon(Icons.water_rounded,
-                      color: Colors.white.withValues(alpha: 0.85), size: 26),
-                ],
-              ),
-              const SizedBox(height: 6),
+              const Text('PISCIGRANJA',
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      letterSpacing: 1.5)),
+              const SizedBox(height: 4),
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text('BOLETERÍA',
                     style: TextStyle(
                         color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 5)),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 3)),
               ),
             ],
-          ),
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: IconButton(
-                onPressed: onBackTap,
-                icon: const Icon(Icons.arrow_back_rounded,
-                    color: Colors.white, size: 28),
-                tooltip: 'Volver',
-              ),
-            ),
           ),
         ],
       ),
@@ -251,10 +265,10 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       texto,
       style: const TextStyle(
-          fontSize: 15,
+          fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF0D47A1),
-          letterSpacing: 0.5),
+          color: Colors.blueGrey,
+          letterSpacing: 1.2),
     );
   }
 }
@@ -276,41 +290,43 @@ class _ContadorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: const Color(0xFF1565C0).withValues(alpha: 0.09),
-              blurRadius: 10,
+              color: const Color(0xFF0052CC).withValues(alpha: 0.09),
+              blurRadius: 12,
               offset: const Offset(0, 4))
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF1565C0).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF0052CC).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icono, color: const Color(0xFF1565C0), size: 26),
+            child: Icon(icono, color: const Color(0xFF0052CC), size: 36),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 18),
           Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
                     style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A237E))),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0052CC))),
+                const SizedBox(height: 4),
                 Text('S/ ${precio.toStringAsFixed(2)} c/u',
                     style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF1565C0),
+                        fontSize: 14,
+                        color: Color(0xFF0052CC),
                         fontWeight: FontWeight.w500)),
               ],
             ),
@@ -320,13 +336,13 @@ class _ContadorCard extends StatelessWidget {
               habilitado: valor > 0,
               onTap: () => onChanged(valor - 1)),
           SizedBox(
-            width: 52,
+            width: 72,
             child: Center(
               child: Text('$valor',
                   style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1565C0))),
+                      fontSize: 46,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0052CC))),
             ),
           ),
           _FlechaBtn(
@@ -351,14 +367,22 @@ class _FlechaBtn extends StatelessWidget {
     return GestureDetector(
       onTap: habilitado ? onTap : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(9),
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: habilitado ? const Color(0xFF1565C0) : Colors.grey.shade300,
-          borderRadius: BorderRadius.circular(10),
+          color: habilitado ? const Color(0xFF0052CC) : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: habilitado
+              ? [
+                  BoxShadow(
+                      color: const Color(0xFF0052CC).withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3))
+                ]
+              : [],
         ),
         child: Icon(icono,
-            color: habilitado ? Colors.white : Colors.grey.shade500, size: 20),
+            color: habilitado ? Colors.white : Colors.grey.shade400, size: 28),
       ),
     );
   }
@@ -419,19 +443,19 @@ class _ChipPago extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
-            color: activo ? const Color(0xFF1565C0) : Colors.white,
+            color: activo ? const Color(0xFF0052CC) : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color:
-                  activo ? const Color(0xFF1565C0) : const Color(0xFFBBDEFB),
+                  activo ? const Color(0xFF0052CC) : const Color(0xFFCCE0FF),
               width: 2,
             ),
             boxShadow: activo
                 ? [
                     BoxShadow(
-                        color: const Color(0xFF1565C0).withValues(alpha: 0.28),
+                        color: const Color(0xFF0052CC).withValues(alpha: 0.28),
                         blurRadius: 8,
                         offset: const Offset(0, 4))
                   ]
@@ -440,7 +464,7 @@ class _ChipPago extends StatelessWidget {
           child: Column(
             children: [
               Icon(icono,
-                  color: activo ? Colors.white : const Color(0xFF1565C0),
+                  color: activo ? Colors.white : const Color(0xFF0052CC),
                   size: 22),
               const SizedBox(height: 5),
               Text(label,
@@ -448,7 +472,7 @@ class _ChipPago extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                       color:
-                          activo ? Colors.white : const Color(0xFF1565C0))),
+                          activo ? Colors.white : const Color(0xFF0052CC))),
             ],
           ),
         ),
@@ -457,208 +481,24 @@ class _ChipPago extends StatelessWidget {
   }
 }
 
-class _EfectivoCard extends StatelessWidget {
-  final TextEditingController controller;
-  final double vuelto;
-  final bool insuficiente;
-  final ValueChanged<String> onChanged;
-  const _EfectivoCard({
-    required this.controller,
-    required this.vuelto,
-    required this.insuficiente,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: const Color(0xFF1565C0).withValues(alpha: 0.07),
-              blurRadius: 10,
-              offset: const Offset(0, 4))
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Pago en Efectivo',
-              style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0D47A1),
-                  fontSize: 14)),
-          const SizedBox(height: 12),
-          TextField(
-            controller: controller,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-            ],
-            decoration: InputDecoration(
-              labelText: 'Monto entregado (S/)',
-              prefixIcon: const Icon(Icons.attach_money_rounded,
-                  color: Color(0xFF1565C0)),
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    const BorderSide(color: Color(0xFF1565C0), width: 2),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            ),
-            onChanged: onChanged,
-          ),
-          if (vuelto > 0) ...[
-            const SizedBox(height: 10),
-            _InfoBox(
-              color: const Color(0xFFE8F5E9),
-              border: const Color(0xFF43A047),
-              icono: Icons.change_circle_rounded,
-              iconoColor: const Color(0xFF2E7D32),
-              texto: 'Vuelto:  S/ ${vuelto.toStringAsFixed(2)}',
-              textoColor: const Color(0xFF1B5E20),
-            ),
-          ],
-          if (insuficiente) ...[
-            const SizedBox(height: 10),
-            _InfoBox(
-              color: const Color(0xFFFFEBEE),
-              border: Colors.redAccent,
-              icono: Icons.warning_amber_rounded,
-              iconoColor: Colors.red,
-              texto:
-                  'Monto insuficiente  (faltan S/ ${(-vuelto).toStringAsFixed(2)})',
-              textoColor: Colors.red.shade700,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoBox extends StatelessWidget {
-  final Color color, border, iconoColor, textoColor;
-  final IconData icono;
-  final String texto;
-  const _InfoBox({
-    required this.color,
-    required this.border,
-    required this.icono,
-    required this.iconoColor,
-    required this.texto,
-    required this.textoColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: border),
-      ),
-      child: Row(
-        children: [
-          Icon(icono, color: iconoColor, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(texto,
-                style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: textoColor)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TotalCard extends StatelessWidget {
+class _BottomBar extends StatelessWidget {
   final int adultos, ninos;
   final double total;
-  const _TotalCard(
-      {required this.adultos, required this.ninos, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: const Color(0xFF1565C0).withValues(alpha: 0.32),
-              blurRadius: 14,
-              offset: const Offset(0, 5))
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Total: ${adultos + ninos} persona(s)',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14)),
-              const SizedBox(height: 4),
-              Text('— Adultos: $adultos',
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 13)),
-              const SizedBox(height: 2),
-              Text('— Niños: $ninos',
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 13)),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const Text('TOTAL A PAGAR',
-                  style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 11,
-                      letterSpacing: 1)),
-              Text('S/ ${total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BotonGuardar extends StatelessWidget {
   final bool habilitado;
   final VoidCallback onTap;
-  const _BotonGuardar({required this.habilitado, required this.onTap});
+
+  const _BottomBar({
+    required this.adultos,
+    required this.ninos,
+    required this.total,
+    required this.habilitado,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
       decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -666,21 +506,289 @@ class _BotonGuardar extends StatelessWidget {
               color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
         ],
       ),
-      child: ElevatedButton.icon(
-        onPressed: habilitado ? onTap : null,
-        icon: const Icon(Icons.save_alt_rounded, size: 22),
-        label: const Text('GUARDAR Y VER TICKET',
-            style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 1)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1565C0),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey.shade300,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14)),
-          elevation: 3,
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('RESUMEN DE VENTA',
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5)),
+                const SizedBox(height: 3),
+                Text('${adultos + ninos} persona(s)',
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0052CC))),
+                Text('Adultos: $adultos   Niños: $ninos',
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('TOTAL A PAGAR',
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5)),
+                const SizedBox(height: 3),
+                Text('S/ ${total.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0052CC))),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: habilitado ? onTap : null,
+            icon: const Icon(Icons.print_rounded, size: 24),
+            label: const Text('IMPRIMIR TICKET',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0052CC),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade300,
+              padding:
+                  const EdgeInsets.symmetric(vertical: 20, horizontal: 28),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              elevation: 4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TicketPreviewCard extends StatelessWidget {
+  final int adultos, ninos;
+  final double precioAdulto, precioNino, total;
+  final String metodoPago;
+
+  const _TicketPreviewCard({
+    required this.adultos,
+    required this.ninos,
+    required this.precioAdulto,
+    required this.precioNino,
+    required this.total,
+    required this.metodoPago,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final h = now.hour;
+    final ampm = h < 12 ? 'AM' : 'PM';
+    final h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h);
+    final fecha =
+        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year} '
+        '${h12.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $ampm';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0052CC).withValues(alpha: 0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Cabecera azul
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0052CC),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: const Column(
+              children: [
+                Text('PISCIGRANJA',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                        letterSpacing: 2)),
+                SizedBox(height: 3),
+                Text('TICKET DE INGRESO',
+                    style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                        letterSpacing: 1.5)),
+              ],
+            ),
+          ),
+          // Cabecera de tabla
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+            child: Row(
+              children: const [
+                SizedBox(
+                    width: 34,
+                    child: Text('CANT',
+                        style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w700))),
+                SizedBox(width: 8),
+                Expanded(
+                    child: Text('DETALLE',
+                        style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w700))),
+                Text('SUBT.',
+                    style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 14, endIndent: 14),
+          const SizedBox(height: 8),
+          _PreviewRow(
+            cant: adultos,
+            label: 'Adultos (S/ ${precioAdulto.toStringAsFixed(2)})',
+            subtotal: adultos * precioAdulto,
+          ),
+          const SizedBox(height: 6),
+          _PreviewRow(
+            cant: ninos,
+            label: 'Niños (S/ ${precioNino.toStringAsFixed(2)})',
+            subtotal: ninos * precioNino,
+          ),
+          const SizedBox(height: 10),
+          const Divider(indent: 14, endIndent: 14, thickness: 1.5),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('TOTAL',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: Color(0xFF0052CC))),
+                Text('S/ ${total.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 20,
+                        color: Color(0xFF0052CC))),
+              ],
+            ),
+          ),
+          // Pie: pago y fecha
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            color: const Color(0xFFF8F9FA),
+            child: Column(
+              children: [
+                Text('PAGO: ${metodoPago.toUpperCase()}',
+                    style:
+                        const TextStyle(fontSize: 10, color: Colors.grey)),
+                const SizedBox(height: 2),
+                Text('FECHA: $fecha',
+                    style:
+                        const TextStyle(fontSize: 10, color: Colors.grey)),
+              ],
+            ),
+          ),
+          // QR placeholder
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Center(
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: GridView.count(
+                  crossAxisCount: 4,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: List.generate(
+                    16,
+                    (i) => Container(
+                      margin: const EdgeInsets.all(1.5),
+                      color: const [
+                            true,  false, true,  true,
+                            false, true,  false, true,
+                            true,  false, true,  false,
+                            true,  true,  false, true,
+                          ][i]
+                          ? Colors.grey.shade400
+                          : Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewRow extends StatelessWidget {
+  final int cant;
+  final String label;
+  final double subtotal;
+
+  const _PreviewRow({
+    required this.cant,
+    required this.label,
+    required this.subtotal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 34,
+            child: Text('$cant',
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0052CC))),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(label,
+                style: const TextStyle(
+                    fontSize: 12, color: Color(0xFF424242))),
+          ),
+          Text('S/ ${subtotal.toStringAsFixed(2)}',
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

@@ -9,10 +9,10 @@ class ConfigProvider extends ChangeNotifier {
 
   ConfigModel get config => _config;
 
-  double get precioAdultoSemana => _config.precioAdultoSemana;
-  double get precioAdultoFinde => _config.precioAdultoFinde;
-  double get precioNinoSemana => _config.precioNinoSemana;
-  double get precioNinoFinde => _config.precioNinoFinde;
+  /// weekday: 1 = Lunes … 7 = Domingo (DateTime.weekday)
+  double precioAdulto(int weekday) => _config.precioAdultoDia(weekday);
+  double precioNino(int weekday) => _config.precioNinoDia(weekday);
+
   String get nombreImpresora => _config.nombreImpresora;
 
   Future<void> cargar() async {
@@ -21,16 +21,12 @@ class ConfigProvider extends ChangeNotifier {
   }
 
   Future<void> actualizarPrecios({
-    required double adultoSemana,
-    required double adultoFinde,
-    required double ninoSemana,
-    required double ninoFinde,
+    required List<double> preciosAdulto,
+    required List<double> preciosNino,
   }) async {
     _config = _config.copyWith(
-      precioAdultoSemana: adultoSemana,
-      precioAdultoFinde: adultoFinde,
-      precioNinoSemana: ninoSemana,
-      precioNinoFinde: ninoFinde,
+      preciosAdulto: preciosAdulto,
+      preciosNino: preciosNino,
     );
     await _repo.guardar(_config);
     notifyListeners();

@@ -29,7 +29,7 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const activeColor = Color(0xFF1565C0);
+    const activeColor = Color(0xFF0052CC);
     const activeBg = Color(0xFFE8F0FE);
     final cfg = context.watch<ConfigProvider>();
 
@@ -63,7 +63,7 @@ class AppDrawer extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                  colors: [Color(0xFF1565C0), Color(0xFF0D47A1)]),
+                  colors: [Color(0xFF0052CC), Color(0xFF003D99)]),
             ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,8 +113,8 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Precio del Ticket',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
             subtitle: Text(
-                'Adulto S/ ${cfg.precioAdultoSemana.toStringAsFixed(2)}'
-                '  ·  Finde S/ ${cfg.precioAdultoFinde.toStringAsFixed(2)}'),
+                'Adulto S/ ${cfg.precioAdulto(DateTime.now().weekday).toStringAsFixed(2)}'
+                '  ·  Niño S/ ${cfg.precioNino(DateTime.now().weekday).toStringAsFixed(2)}'),
             onTap: () => _ir(context, 'config', tab: 0),
           ),
           ListTile(
