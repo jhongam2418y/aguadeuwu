@@ -37,6 +37,7 @@ class AppDatabase {
         anulado   INTEGER NOT NULL DEFAULT 0
       )
     ''');
+    await db.execute('CREATE INDEX idx_tickets_hora ON tickets(hora)');
 
     await _crearTablaConfiguracion(db);
     await _insertarConfigDefaults(db);
@@ -94,8 +95,4 @@ class AppDatabase {
     });
   }
 
-  Future<void> limpiarTickets() async {
-    final db = await database;
-    await db.delete('tickets');
-  }
 }

@@ -46,19 +46,8 @@ class TicketRepository {
 
   /// Devuelve todos los tickets del día actual, orden descendente.
   Future<List<TicketModel>> obtenerTicketsHoy() async {
-    final db = await _db;
     final hoy = DateTime.now();
-    final inicio = DateTime(hoy.year, hoy.month, hoy.day).toIso8601String();
-    final fin = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59).toIso8601String();
-
-    final rows = await db.query(
-      'tickets',
-      where: 'hora BETWEEN ? AND ?',
-      whereArgs: [inicio, fin],
-      orderBy: 'hora DESC',
-    );
-
-    return rows.map(TicketModel.fromMap).toList();
+    return obtenerTicketsPorRango(hoy, hoy);
   }
 
   /// Marca un ticket como anulado.
@@ -85,13 +74,6 @@ class TicketRepository {
       orderBy: 'hora DESC',
     );
 
-    return rows.map(TicketModel.fromMap).toList();
-  }
-
-  /// Devuelve todos los tickets (histórico completo).
-  Future<List<TicketModel>> obtenerTodos() async {
-    final db = await _db;
-    final rows = await db.query('tickets', orderBy: 'hora DESC');
     return rows.map(TicketModel.fromMap).toList();
   }
 }

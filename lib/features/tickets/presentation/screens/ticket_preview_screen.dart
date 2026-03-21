@@ -124,46 +124,52 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
   }
 
   Future<void> _confirmarAnulacion(BuildContext context) async {
-    if (!_guardado) {
-      widget.onSalir();
-      Navigator.pop(context);
-      return;
-    }
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Anular Ticket'),
-        content: const Text(
-            'Este ticket ya fue guardado. ¿Desea anularlo? Esta acción no se puede deshacer.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Anular'),
-          ),
-        ],
-      ),
-    );
-    if (confirmar == true && _ticketDbId != null && mounted) {
-      await context.read<TicketProvider>().anularTicket(_ticketDbId!);
-      if (!context.mounted) return; 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Ticket anulado correctamente'),
-          backgroundColor: Colors.red,
-        ));
-        widget.onSalir();
-        Navigator.of(context).popUntil((r) => r.isFirst);
-      }
-    }
+  if (!_guardado) {
+    widget.onSalir();
+    Navigator.pop(context);
+    return;
   }
+
+  final provider = context.read<TicketProvider>();
+  final messenger = ScaffoldMessenger.of(context);
+  final navigator = Navigator.of(context);
+
+  final confirmar = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Anular Ticket'),
+      content: const Text(
+        'Este ticket ya fue guardado. ¿Desea anularlo? Esta acción no se puede deshacer.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Anular'),
+        ),
+      ],
+    ),
+  );
+
+  if (!mounted) return;
+
+  if (confirmar == true && _ticketDbId != null) {
+    await provider.anularTicket(_ticketDbId!);
+
+    if (!mounted) return;
+
+    messenger.showSnackBar(const SnackBar(
+      content: Text('Ticket anulado correctamente'),
+      backgroundColor: Colors.red,
+    ));
+
+    widget.onSalir();
+    navigator.popUntil((r) => r.isFirst);
+  }
+}
 
   Future<void> _imprimir(BuildContext context) async {
     if (!_guardado) {
