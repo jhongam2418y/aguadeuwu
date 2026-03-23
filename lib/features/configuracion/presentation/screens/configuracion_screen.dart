@@ -251,22 +251,34 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+              child: SizedBox(
+                width: double.infinity,
+                height: 62, // altura fija generosa
                 child: ElevatedButton.icon(
                   onPressed: _guardarPrecios,
-                  icon: const Icon(Icons.save_rounded),
-                  label: const Text('GUARDAR PRECIOS',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700, letterSpacing: 1)),
+                  icon: const Icon(Icons.save_rounded, size: 26),
+                  label: const Text(
+                    'GUARDAR PRECIOS',
+                    style: TextStyle(
+                      fontSize: 18,             // era implícito ~14
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0052CC),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 4,
+                    shadowColor: const Color(0xFF0052CC).withValues(alpha: 0.5),
                   ),
                 ),
               ),
+            ),
             ],
           ),
           //  Tab Impresora 

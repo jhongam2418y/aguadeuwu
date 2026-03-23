@@ -61,8 +61,8 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
           : pw.TextStyle(fontSize: fontSize);
       return pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [pw.Text(label, style: style), pw.Text(value, style: style)],
-      );
+        children: [pw.Text(label, style: style), pw.Text(value, style: style),
+      ]);
     }
 
     pdf.addPage(
@@ -124,52 +124,52 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
   }
 
   Future<void> _confirmarAnulacion(BuildContext context) async {
-  if (!_guardado) {
-    widget.onSalir();
-    Navigator.pop(context);
-    return;
-  }
+    if (!_guardado) {
+      widget.onSalir();
+      Navigator.pop(context);
+      return;
+    }
 
-  final provider = context.read<TicketProvider>();
-  final messenger = ScaffoldMessenger.of(context);
-  final navigator = Navigator.of(context);
+    final provider = context.read<TicketProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
-  final confirmar = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Anular Ticket'),
-      content: const Text(
-        'Este ticket ya fue guardado. ¿Desea anularlo? Esta acción no se puede deshacer.',
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Anular Ticket'),
+        content: const Text(
+          'Este ticket ya fue guardado. ¿Desea anularlo? Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Anular'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Anular'),
-        ),
-      ],
-    ),
-  );
-
-  if (!mounted) return;
-
-  if (confirmar == true && _ticketDbId != null) {
-    await provider.anularTicket(_ticketDbId!);
+    );
 
     if (!mounted) return;
 
-    messenger.showSnackBar(const SnackBar(
-      content: Text('Ticket anulado correctamente'),
-      backgroundColor: Colors.red,
-    ));
+    if (confirmar == true && _ticketDbId != null) {
+      await provider.anularTicket(_ticketDbId!);
 
-    widget.onSalir();
-    navigator.popUntil((r) => r.isFirst);
+      if (!mounted) return;
+
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Ticket anulado correctamente'),
+        backgroundColor: Colors.red,
+      ));
+
+      widget.onSalir();
+      navigator.popUntil((r) => r.isFirst);
+    }
   }
-}
 
   Future<void> _imprimir(BuildContext context) async {
     if (!_guardado) {
@@ -215,7 +215,6 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
               ),
             ),
 
-
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -246,7 +245,6 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                     ),
                   ),
 
-
                   Expanded(
                     flex: 40,
                     child: Padding(
@@ -254,15 +252,13 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Card de acciones
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                    color: Colors.black
-                                        .withValues(alpha: 0.07),
+                                    color: Colors.black.withValues(alpha: 0.07),
                                     blurRadius: 16,
                                     offset: const Offset(0, 4))
                               ],
@@ -271,7 +267,6 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // Título
                                 Row(children: const [
                                   Icon(Icons.print_rounded,
                                       color: Color(0xFF0052CC), size: 22),
@@ -282,72 +277,71 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                                           fontWeight: FontWeight.w800,
                                           color: Color(0xFF1A1A1A))),
                                 ]),
-                                const SizedBox(height: 20),
-                                // Imprimir Ticket
+                                const SizedBox(height: 24),
+
+                                // ── Imprimir Ticket ──────────────────────────
                                 ElevatedButton.icon(
                                   onPressed: () => _imprimir(context),
-                                  icon: const Icon(Icons.print_rounded,
-                                      size: 24),
-                                  label: const Text('Imprimir Ticket',
-                                      style: TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w800)),
+                                  icon: const Icon(Icons.print_rounded, size: 26),
+                                  label: const Text(
+                                    'Imprimir Ticket',
+                                    style: TextStyle(
+                                        fontSize: 20,           // era 17
+                                        fontWeight: FontWeight.w800),
+                                  ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        const Color(0xFF0052CC),
+                                    backgroundColor: const Color(0xFF0052CC),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 22),
+                                        vertical: 30),             // era 22
                                     shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
+                                        borderRadius: BorderRadius.circular(12)),
                                     elevation: 3,
                                   ),
                                 ),
-                                const SizedBox(height: 14),
-                                // Editar Datos
+                                const SizedBox(height: 24),        // era 20
+
+                                // ── Editar Datos ─────────────────────────────
                                 OutlinedButton.icon(
                                   onPressed: () => Navigator.pop(context),
-                                  icon: const Icon(Icons.edit_rounded,
-                                      size: 22),
-                                  label: const Text('Editar Datos',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700)),
+                                  icon: const Icon(Icons.edit_rounded, size: 24),
+                                  label: const Text(
+                                    'Editar Datos',
+                                    style: TextStyle(
+                                        fontSize: 18,             // era 16
+                                        fontWeight: FontWeight.w700),
+                                  ),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        const Color(0xFF0052CC),
+                                    foregroundColor: const Color(0xFF0052CC),
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 18),
+                                        vertical: 26),             // era 18
                                     side: const BorderSide(
-                                        color: Color(0xFF90CAF9),
-                                        width: 1.5),
+                                        color: Color(0xFF90CAF9), width: 1.5),
                                     shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
+                                        borderRadius: BorderRadius.circular(12)),
                                   ),
                                 ),
-                                const SizedBox(height: 14),
-                                // Anular / Cancelar
+                                const SizedBox(height: 16),        // era 14
+
+                                // ── Anular / Cancelar ────────────────────────
                                 OutlinedButton.icon(
                                   onPressed: () => _confirmarAnulacion(context),
                                   icon: Icon(Icons.close_rounded,
-                                      color: Colors.red.shade600, size: 22),
+                                      color: Colors.red.shade600, size: 24),
                                   label: Text(
-                                      _guardado ? 'Anular Ticket' : 'Cancelar',
-                                      style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700)),
+                                    _guardado ? 'Anular Ticket' : 'Cancelar',
+                                    style: const TextStyle(
+                                        fontSize: 18,             // era 16
+                                        fontWeight: FontWeight.w700),
+                                  ),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: Colors.red.shade600,
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 18),
+                                        vertical: 26),             // era 18
                                     side: BorderSide(
-                                        color: Colors.red.shade200,
-                                        width: 1.5),
+                                        color: Colors.red.shade200, width: 1.5),
                                     shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
+                                        borderRadius: BorderRadius.circular(12)),
                                   ),
                                 ),
                               ],
@@ -355,7 +349,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                           ),
                           const SizedBox(height: 14),
 
-                          // Volver al Panel Principal
+                          // ── Volver al Panel Principal ────────────────────
                           _DashedButton(
                             onTap: () {
                               widget.onSalir();
@@ -365,7 +359,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
 
                           const Spacer(),
 
-                          // Impresora info card
+                          // ── Impresora info card ──────────────────────────
                           Container(
                             padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
@@ -373,8 +367,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: [
                                 BoxShadow(
-                                    color: Colors.black
-                                        .withValues(alpha: 0.05),
+                                    color: Colors.black.withValues(alpha: 0.05),
                                     blurRadius: 10,
                                     offset: const Offset(0, 2))
                               ],
@@ -401,8 +394,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                                 ),
                                 const SizedBox(width: 14),
                                 Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text('IMPRESORA',
                                         style: TextStyle(
@@ -483,7 +475,6 @@ class _TicketCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Franja azul
                 Container(
                   height: 6,
                   decoration: const BoxDecoration(
@@ -492,7 +483,6 @@ class _TicketCard extends StatelessWidget {
                         BorderRadius.vertical(top: Radius.circular(4)),
                   ),
                 ),
-                // Encabezado
                 const Padding(
                   padding: EdgeInsets.fromLTRB(20, 18, 20, 12),
                   child: Column(
@@ -512,7 +502,6 @@ class _TicketCard extends StatelessWidget {
                   ),
                 ),
                 const _TicketDivider(),
-                // FECHA / HORA / TIPO
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                   child: Column(
@@ -527,7 +516,6 @@ class _TicketCard extends StatelessWidget {
                   ),
                 ),
                 const _TicketDivider(),
-                // Items
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                   child: Column(
@@ -550,7 +538,6 @@ class _TicketCard extends StatelessWidget {
                   ),
                 ),
                 const _TicketDivider(thick: true),
-                // TOTAL
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
                   child: Row(
@@ -566,7 +553,6 @@ class _TicketCard extends StatelessWidget {
                   ),
                 ),
                 const _TicketDivider(),
-                // Gracias
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   child: Text('¡GRACIAS POR SU VISITA!',
@@ -576,7 +562,6 @@ class _TicketCard extends StatelessWidget {
                           color: Colors.grey.shade600,
                           letterSpacing: 0.5)),
                 ),
-                // Código de barras visual
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Center(
@@ -667,16 +652,16 @@ class _DashedButton extends StatelessWidget {
       child: CustomPaint(
         painter: _DashedBorderPainter(),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 28), // era 20
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: const [
               Icon(Icons.arrow_back_rounded,
-                  size: 18, color: Color(0xFF0052CC)),
+                  size: 20, color: Color(0xFF0052CC)),   // era 18
               SizedBox(width: 8),
               Text('Volver al Panel Principal',
                   style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 16,                       // era 14
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF0052CC))),
             ],

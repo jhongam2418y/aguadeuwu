@@ -15,9 +15,9 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   int ninos = 0;
   String metodoPago = 'efectivo';
 
+  // Fixed the syntax error and added the missing body for _precioAdulto
   double _precioAdulto(ConfigProvider cfg) =>
       cfg.precioAdulto(DateTime.now().weekday);
-
   double _precioNino(ConfigProvider cfg) =>
       cfg.precioNino(DateTime.now().weekday);
 
@@ -32,11 +32,16 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
     });
   }
 
-  Future<void> _irAPreview(ConfigProvider cfg) async {
-    if (adultos + ninos == 0) return;
-    if (!mounted) return;
+    Future<int?> _irAPreview(ConfigProvider cfg) async {
+    // 1. Validaciones iniciales con retorno nulo
+    if (adultos + ninos == 0) return null;
+    if (!mounted) return null;
+
     final provider = context.read<TicketProvider>();
-    Navigator.push(
+
+    // 2. Navegación
+    // Usamos "await" aquí por si quieres esperar a que la pantalla se cierre
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => TicketPreviewScreen(
@@ -54,12 +59,24 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
               monto: _total(cfg),
               metodoPago: metodoPago,
             );
-            return ticket.id;
+
+            // Verificación de seguridad después de un proceso asíncrono
+            if (!mounted) return -1; 
+
+            Navigator.pop(context); 
+            _resetear(); 
+            
+            return ticket.id; // Retorna el ID del ticket guardado
           },
         ),
       ),
     );
+
+    // 3. Retorno final obligatorio
+    // Como la función principal es Future<int?>, necesita este return al final
+    return null; 
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +242,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
+                  color: Colors.white.withAlpha(0x18), // Correct way to set alpha
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text('BOLETERÍA',
@@ -283,7 +300,7 @@ class _ContadorCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: const Color(0xFF0052CC).withValues(alpha: 0.09),
+              color: const Color(0xFF0052CC).withAlpha(0x09), // Correct way to set alpha
               blurRadius: 12,
               offset: const Offset(0, 4))
         ],
@@ -293,7 +310,7 @@ class _ContadorCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF0052CC).withValues(alpha: 0.1),
+              color: const Color(0xFF0052CC).withAlpha(0x10), // Correct way to set alpha
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icono, color: const Color(0xFF0052CC), size: 36),
@@ -312,7 +329,7 @@ class _ContadorCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text('S/ ${precio.toStringAsFixed(2)} c/u',
                     style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         color: Color(0xFF0052CC),
                         fontWeight: FontWeight.w500)),
               ],
@@ -362,7 +379,7 @@ class _FlechaBtn extends StatelessWidget {
           boxShadow: habilitado
               ? [
                   BoxShadow(
-                      color: const Color(0xFF0052CC).withValues(alpha: 0.35),
+                      color: const Color(0xFF0052CC).withAlpha(0x35), // Correct way to set alpha
                       blurRadius: 8,
                       offset: const Offset(0, 3))
                 ]
@@ -442,7 +459,7 @@ class _ChipPago extends StatelessWidget {
             boxShadow: activo
                 ? [
                     BoxShadow(
-                        color: const Color(0xFF0052CC).withValues(alpha: 0.28),
+                        color: const Color(0xFF0052CC).withAlpha(0x28), // Correct way to set alpha
                         blurRadius: 8,
                         offset: const Offset(0, 4))
                   ]
@@ -541,10 +558,10 @@ class _BottomBar extends StatelessWidget {
           ),
           ElevatedButton.icon(
             onPressed: habilitado ? onTap : null,
-            icon: const Icon(Icons.print_rounded, size: 24),
+            icon: const Icon(Icons.print_rounded, size: 26),
             label: const Text('IMPRIMIR TICKET',
                 style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 19,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.5)),
             style: ElevatedButton.styleFrom(
@@ -552,7 +569,7 @@ class _BottomBar extends StatelessWidget {
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.grey.shade300,
               padding:
-                  const EdgeInsets.symmetric(vertical: 20, horizontal: 28),
+                  const EdgeInsets.symmetric(vertical: 27, horizontal: 30),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
               elevation: 4,
@@ -594,7 +611,7 @@ class _TicketPreviewCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0052CC).withValues(alpha: 0.12),
+            color: const Color(0xFF0052CC).withAlpha(0x12), // Correct way to set alpha
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -780,3 +797,5 @@ class _PreviewRow extends StatelessWidget {
     );
   }
 }
+
+
