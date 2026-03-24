@@ -83,14 +83,14 @@ class AppDatabase {
   Future<void> _insertarConfigDefaults(Database db, {String nombreImpresora = ''}) async {
     await db.insert('configuracion', {
       'id': 1,
-      'precio_adulto_lun': 8.0, 'precio_adulto_mar': 8.0,
-      'precio_adulto_mie': 8.0, 'precio_adulto_jue': 8.0,
-      'precio_adulto_vie': 8.0, 'precio_adulto_sab': 10.0,
-      'precio_adulto_dom': 10.0,
-      'precio_nino_lun': 5.0, 'precio_nino_mar': 5.0,
-      'precio_nino_mie': 5.0, 'precio_nino_jue': 5.0,
-      'precio_nino_vie': 5.0, 'precio_nino_sab': 7.0,
-      'precio_nino_dom': 7.0,
+      'precio_adulto_lun': 5.0, 'precio_adulto_mar': 5.0,
+      'precio_adulto_mie': 5.0, 'precio_adulto_jue': 5.0,
+      'precio_adulto_vie': 5.0, 'precio_adulto_sab': 7.0,
+      'precio_adulto_dom': 7.0,
+      'precio_nino_lun': 2.50, 'precio_nino_mar': 2.50,
+      'precio_nino_mie': 2.50, 'precio_nino_jue': 2.50,
+      'precio_nino_vie': 2.50, 'precio_nino_sab': 5.0,
+      'precio_nino_dom': 5.0,
       'nombre_impresora': nombreImpresora,
     });
   }
