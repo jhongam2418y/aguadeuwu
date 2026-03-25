@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../configuracion/presentation/providers/config_provider.dart';
 import '../providers/ticket_provider.dart';
 import 'ticket_preview_screen.dart';
+import '../../../../core/app_colors.dart';
 
 class BoleteriaScreen extends StatefulWidget {
   const BoleteriaScreen({super.key});
@@ -86,7 +87,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
     final total = _total(cfg);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F7FF),
+      backgroundColor: AppColors.lightBlueBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -197,7 +198,7 @@ class _Header extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0052CC), Color(0xFF003D99)],
+          colors: [AppColors.primaryBlue, AppColors.darkBlue],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -224,7 +225,7 @@ class _Header extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1)),
                 Text('Emisión de comprobante de ingreso',
-                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    style: TextStyle(color: AppColors.lightGrey, fontSize: 12)),
               ],
             ),
           ),
@@ -234,7 +235,7 @@ class _Header extends StatelessWidget {
             children: [
               const Text('PISCIGRANJA',
                   style: TextStyle(
-                      color: Colors.white70,
+                      color: AppColors.lightGrey,
                       fontSize: 11,
                       letterSpacing: 1.5)),
               const SizedBox(height: 4),
@@ -300,7 +301,7 @@ class _ContadorCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: const Color(0xFF0052CC).withAlpha(0x09), // Correct way to set alpha
+              color: AppColors.blueOpacity09, // Correct way to set alpha
               blurRadius: 12,
               offset: const Offset(0, 4))
         ],
@@ -310,10 +311,10 @@ class _ContadorCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF0052CC).withAlpha(0x10), // Correct way to set alpha
+              color: AppColors.blueOpacity10, // Correct way to set alpha
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icono, color: const Color(0xFF0052CC), size: 36),
+            child: Icon(icono, color: AppColors.primaryBlue, size: 36),
           ),
           const SizedBox(width: 18),
           Expanded(
@@ -325,12 +326,12 @@ class _ContadorCard extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0052CC))),
+                        color: AppColors.primaryBlue)),
                 const SizedBox(height: 4),
                 Text('S/ ${precio.toStringAsFixed(2)} c/u',
                     style: const TextStyle(
                         fontSize: 16,
-                        color: Color(0xFF0052CC),
+                        color:AppColors.primaryBlue,
                         fontWeight: FontWeight.w500)),
               ],
             ),
@@ -346,7 +347,7 @@ class _ContadorCard extends StatelessWidget {
                   style: const TextStyle(
                       fontSize: 46,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF0052CC))),
+                      color: AppColors.primaryBlue)),
             ),
           ),
           _FlechaBtn(
@@ -374,12 +375,12 @@ class _FlechaBtn extends StatelessWidget {
         duration: const Duration(milliseconds: 120),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: habilitado ? const Color(0xFF0052CC) : Colors.grey.shade200,
+          color: habilitado ? AppColors.primaryBlue : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(14),
           boxShadow: habilitado
               ? [
                   BoxShadow(
-                      color: const Color(0xFF0052CC).withAlpha(0x35), // Correct way to set alpha
+                      color: AppColors.blueOpacity35, // Correct way to set alpha
                       blurRadius: 8,
                       offset: const Offset(0, 3))
                 ]
@@ -449,17 +450,17 @@ class _ChipPago extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
-            color: activo ? const Color(0xFF0052CC) : Colors.white,
+            color: activo ? AppColors.primaryBlue : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color:
-                  activo ? const Color(0xFF0052CC) : const Color(0xFFCCE0FF),
+                  activo ? AppColors.primaryBlue : const Color(0xFFCCE0FF),
               width: 2,
             ),
             boxShadow: activo
                 ? [
                     BoxShadow(
-                        color: const Color(0xFF0052CC).withAlpha(0x28), // Correct way to set alpha
+                        color: AppColors.blueOpacity28, // Correct way to set alpha
                         blurRadius: 8,
                         offset: const Offset(0, 4))
                   ]
@@ -468,7 +469,7 @@ class _ChipPago extends StatelessWidget {
           child: Column(
             children: [
               Icon(icono,
-                  color: activo ? Colors.white : const Color(0xFF0052CC),
+                  color: activo ? Colors.white : AppColors.primaryBlue,
                   size: 22),
               const SizedBox(height: 5),
               Text(label,
@@ -476,7 +477,7 @@ class _ChipPago extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                       color:
-                          activo ? Colors.white : const Color(0xFF0052CC))),
+                          activo ? Colors.white : AppColors.primaryBlue)),
             ],
           ),
         ),
@@ -528,7 +529,7 @@ class _BottomBar extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF0052CC))),
+                        color: AppColors.primaryBlue)),
                 Text('Adultos: $adultos   Niños: $ninos',
                     style:
                         const TextStyle(fontSize: 12, color: Colors.grey)),
@@ -552,7 +553,7 @@ class _BottomBar extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF0052CC))),
+                        color: AppColors.primaryBlue)),
               ],
             ),
           ),
@@ -565,7 +566,7 @@ class _BottomBar extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.5)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0052CC),
+              backgroundColor: AppColors.primaryBlue,
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.grey.shade300,
               padding:
@@ -611,7 +612,7 @@ class _TicketPreviewCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0052CC).withAlpha(0x12), // Correct way to set alpha
+            color: AppColors.blueOpacity10, // Correct way to set alpha
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -624,7 +625,7 @@ class _TicketPreviewCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: const BoxDecoration(
-              color: Color(0xFF0052CC),
+              color: AppColors.primaryBlue,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -641,7 +642,7 @@ class _TicketPreviewCard extends StatelessWidget {
                 SizedBox(height: 3),
                 Text('TICKET DE INGRESO',
                     style: TextStyle(
-                        color: Colors.white70,
+                        color: AppColors.lightGrey,
                         fontSize: 10,
                         letterSpacing: 1.5)),
               ],
@@ -698,12 +699,12 @@ class _TicketPreviewCard extends StatelessWidget {
                     style: TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 14,
-                        color: Color(0xFF0052CC))),
+                        color: AppColors.primaryBlue)),
                 Text('S/ ${total.toStringAsFixed(2)}',
                     style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 20,
-                        color: Color(0xFF0052CC))),
+                        color: AppColors.primaryBlue)),
               ],
             ),
           ),
@@ -781,7 +782,7 @@ class _PreviewRow extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0052CC))),
+                    color: AppColors.primaryBlue)),
           ),
           const SizedBox(width: 8),
           Expanded(
