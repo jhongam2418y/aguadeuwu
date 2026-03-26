@@ -92,7 +92,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    for (final c in [..._adultoCtrls, ..._ninoCtrls]) c.dispose();
+    for (final c in [..._adultoCtrls, ..._ninoCtrls]) {
+      c.dispose();
+    }
     _impresoraCtrl.dispose();
     super.dispose();
   }
