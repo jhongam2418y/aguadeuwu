@@ -8,6 +8,26 @@ import '../../data/models/ticket_model.dart';
 import '../providers/ticket_provider.dart';
 import 'boleteria_screen.dart';
 
+// ─── Constantes de diseño centralizadas ──────────────────────────────────────
+abstract final class _AppColors {
+  static const primary = Color(0xFF0052CC);
+  static const primaryDark = Color(0xFF003D99);
+  static const primaryLight = Color(0xFFE3F0FF);
+  static const green = Color(0xFF21BA45);
+  static const greenLight = Color(0xFFE8F5E9);
+  static const text = Color(0xFF1A1A1A);
+  static const textSoft = Color(0xFF607DB0);
+  static const background = Color(0xFFF0F7FF);
+}
+
+// ─── Formateadores reutilizables (creados una sola vez) ──────────────────────
+final _fmtHora = DateFormat('HH:mm');
+final _fmtDia = DateFormat('EEEE', 'es');
+final _fmtFecha = DateFormat("EEEE d 'de' MMMM", 'es');
+
+// =============================================================================
+// DashboardScreen
+// =============================================================================
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -19,9 +39,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TicketProvider>().cargarTicketsHoy();
-    });
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => context.read<TicketProvider>().cargarTicketsHoy(),
+    );
   }
 
   Future<void> _irABoleteria() async {
@@ -34,85 +54,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TicketProvider>();
-    final cfg = context.watch<ConfigProvider>();
-    final tickets = provider.ticketsHoy;
-    final ticketsActivos = tickets.where((t) => !t.anulado).toList();
-    final totalIngresos = ticketsActivos.fold<double>(0, (s, t) => s + t.monto);
-
-    final String diaLabel = DateFormat('EEEE', 'es').format(DateTime.now());
-    final String fechaHoy =
-        DateFormat("EEEE d 'de' MMMM", 'es').format(DateTime.now());
-    final String diaLabelUpper = diaLabel.toUpperCase();
-    final bool esFinde = DateTime.now().weekday >= 6;
-
+    // Leemos providers una sola vez con Selector para reconstruir solo
+    // los widgets que realmente dependen de cada dato.
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F7FF),
+      backgroundColor: _AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            //  Top bar  ancho completo 
             _TopBar(
               onSettingsTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (_) => const ConfiguracionScreen()),
+                MaterialPageRoute(builder: (_) => const ConfiguracionScreen()),
               ),
             ),
-
-            //  Contenido principal 
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Saludo
-                  _Greeting(fecha: fechaHoy, diaLabel: diaLabelUpper),
-                    const SizedBox(height: 20),
-
-                    // Stats
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            icon: Icons.confirmation_number_rounded,
-                            iconColor: const Color(0xFF0052CC),
-                            bgColor: const Color(0xFFE3F0FF),
-                            label: 'Tickets Hoy',
-                            value: '${ticketsActivos.length}',
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _StatCard(
-                            icon: Icons.payments_rounded,
-                            iconColor: const Color(0xFF21BA45),
-                            bgColor: const Color(0xFFE8F5E9),
-                            label: 'Ingresos Hoy',
-                            value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Precios del día
-                    _PreciosCard(cfg: cfg, esFinde: esFinde),
-                    const SizedBox(height: 24),
-
-                    // Botón Nuevo Ticket centrado
-                    _NuevoTicketButton(onTap: _irABoleteria),
-                    const SizedBox(height: 24),
-
-                    //  Historial integrado 
-                    _HistorialInline(
-                      tickets: tickets,
-                      cargando: provider.cargando,
-                    ),
-                  ],
-                ),
-              ),
+              child: _DashboardBody(onNuevoTicket: _irABoleteria),
             ),
           ],
         ),
@@ -121,8 +77,80 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-//  Top bar 
+// =============================================================================
+// _DashboardBody — isolado para que solo él se reconstruya con los providers
+// =============================================================================
+class _DashboardBody extends StatelessWidget {
+  final VoidCallback onNuevoTicket;
+  const _DashboardBody({required this.onNuevoTicket});
 
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<TicketProvider>();
+    final cfg = context.watch<ConfigProvider>();
+
+    // Cálculos locales (baratos, no justifican Selector extra aquí)
+    final tickets = provider.ticketsHoy;
+    final ticketsActivos = tickets.where((t) => !t.anulado).toList();
+    final totalIngresos = ticketsActivos.fold<double>(0.0, (s, t) => s + t.monto);
+
+    final now = DateTime.now();
+    final fechaHoy = _fmtFecha.format(now);
+    final diaLabelUpper = _fmtDia.format(now).toUpperCase();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Greeting(fecha: fechaHoy, diaLabel: diaLabelUpper),
+          const SizedBox(height: 20),
+
+          // Stats row
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.confirmation_number_rounded,
+                  iconColor: _AppColors.primary,
+                  bgColor: _AppColors.primaryLight,
+                  label: 'Tickets Hoy',
+                  value: '${ticketsActivos.length}',
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.payments_rounded,
+                  iconColor: _AppColors.green,
+                  bgColor: _AppColors.greenLight,
+                  label: 'Ingresos Hoy',
+                  value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          _PreciosCard(cfg: cfg),
+          const SizedBox(height: 24),
+
+          _NuevoTicketButton(onTap: onNuevoTicket),
+          const SizedBox(height: 24),
+
+          _HistorialInline(
+            tickets: tickets,
+            cargando: provider.cargando,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _TopBar  (const-safe: no depende de datos dinámicos)
+// =============================================================================
 class _TopBar extends StatelessWidget {
   final VoidCallback onSettingsTap;
   const _TopBar({required this.onSettingsTap});
@@ -132,7 +160,7 @@ class _TopBar extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0052CC), Color(0xFF003D99)],
+          colors: [_AppColors.primary, _AppColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -140,39 +168,44 @@ class _TopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
+          // Logo icon
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.water_rounded,
-                color: Colors.white, size: 26),
+            child: const Icon(Icons.water_rounded, color: Colors.white, size: 26),
           ),
           const SizedBox(width: 12),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('PISCIGRANJA',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 3)),
-           Text('SISTEMA DE BOLETERÍA',
-                    style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.5)),
+                Text(
+                  'PISCIGRANJA',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 3,
+                  ),
+                ),
+                Text(
+                  'SISTEMA DE BOLETERÍA',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.5,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
             onPressed: onSettingsTap,
-            icon: const Icon(Icons.settings_rounded,
-                color: Colors.white, size: 26),
+            icon: const Icon(Icons.settings_rounded, color: Colors.white, size: 26),
             tooltip: 'Configuración',
           ),
         ],
@@ -181,8 +214,9 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-//  Greeting 
-
+// =============================================================================
+// _Greeting
+// =============================================================================
 class _Greeting extends StatelessWidget {
   final String fecha;
   final String diaLabel;
@@ -193,32 +227,23 @@ class _Greeting extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Bienvenido',
-            style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF1A1A1A))),
+        const Text(
+          'Bienvenido',
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.w900,
+            color: _AppColors.text,
+          ),
+        ),
         const SizedBox(height: 6),
         Row(
           children: [
-            Text(fecha,
-                style: const TextStyle(
-                    fontSize: 14, color: Color(0xFF607DB0))),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0052CC).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(diaLabel,
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0052CC),
-                      letterSpacing: 0.5)),
+            Text(
+              fecha,
+              style: const TextStyle(fontSize: 14, color: _AppColors.textSoft),
             ),
+            const SizedBox(width: 10),
+            _DayBadge(label: diaLabel),
           ],
         ),
       ],
@@ -226,8 +251,34 @@ class _Greeting extends StatelessWidget {
   }
 }
 
-//  Stat card 
+class _DayBadge extends StatelessWidget {
+  final String label;
+  const _DayBadge({required this.label});
 
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: _AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: _AppColors.primary,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _StatCard
+// =============================================================================
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -252,9 +303,10 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: iconColor.withValues(alpha: 0.1),
-              blurRadius: 12,
-              offset: const Offset(0, 4))
+            color: iconColor.withValues(alpha: 0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -272,18 +324,24 @@ class _StatCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label.toUpperCase(),
-                    style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF607DB0),
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.8)),
+                Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: _AppColors.textSoft,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.8,
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF1A1A1A))),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: _AppColors.text,
+                  ),
+                ),
               ],
             ),
           ),
@@ -293,12 +351,12 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-//  Precios del día 
-
+// =============================================================================
+// _PreciosCard  — esFinde eliminado: el precio ya viene directo del cfg
+// =============================================================================
 class _PreciosCard extends StatelessWidget {
   final ConfigProvider cfg;
-  final bool esFinde;
-  const _PreciosCard({required this.cfg, required this.esFinde});
+  const _PreciosCard({required this.cfg});
 
   @override
   Widget build(BuildContext context) {
@@ -313,20 +371,24 @@ class _PreciosCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: const Color(0xFF0052CC).withValues(alpha: 0.07),
-              blurRadius: 10,
-              offset: const Offset(0, 3))
+            color: _AppColors.primary.withValues(alpha: 0.07),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('TARIFAS VIGENTES',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF607DB0),
-                  letterSpacing: 0.8)),
+          const Text(
+            'TARIFAS VIGENTES',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: _AppColors.textSoft,
+              letterSpacing: 0.8,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -357,29 +419,34 @@ class _TarifaItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final double price;
-  const _TarifaItem(
-      {required this.icon, required this.label, required this.price});
+  const _TarifaItem({required this.icon, required this.label, required this.price});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: const Color(0xFF0052CC)),
+        Icon(icon, size: 20, color: _AppColors.primary),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label.toUpperCase(),
-                style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.6,
-                    color: Color(0xFF607DB0))),
-            Text('S/ ${price.toStringAsFixed(2)}',
-                style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF1A1A1A))),
+            Text(
+              label.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.6,
+                color: _AppColors.textSoft,
+              ),
+            ),
+            Text(
+              'S/ ${price.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: _AppColors.text,
+              ),
+            ),
           ],
         ),
       ],
@@ -387,11 +454,29 @@ class _TarifaItem extends StatelessWidget {
   }
 }
 
-//  Botón Nuevo Ticket 
-
+// =============================================================================
+// _NuevoTicketButton
+// =============================================================================
 class _NuevoTicketButton extends StatelessWidget {
   final VoidCallback onTap;
   const _NuevoTicketButton({required this.onTap});
+
+  // Decoración estática — se crea una sola vez
+  static final _decoration = BoxDecoration(
+    gradient: const LinearGradient(
+      colors: [Color(0xFF137FEC), _AppColors.primaryDark],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    borderRadius: BorderRadius.circular(22),
+    boxShadow: [
+      BoxShadow(
+        color: Color(0x660052CC), // 0x66 ≈ alpha 0.4
+        blurRadius: 20,
+        offset: Offset(0, 8),
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -401,38 +486,31 @@ class _NuevoTicketButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Ink(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF137FEC), Color(0xFF003D99)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                  color: const Color(0xFF0052CC).withValues(alpha: 0.4),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8))
-            ],
-          ),
+          decoration: _decoration,
           padding: const EdgeInsets.symmetric(vertical: 28),
           child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.add_circle_rounded, color: Colors.white, size: 52),
               SizedBox(height: 12),
-              Text('Nuevo Ticket',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1)),
+              Text(
+                'Nuevo Ticket',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1,
+                ),
+              ),
               SizedBox(height: 4),
-              Text('Toca para emitir un nuevo ticket de ingreso',
-                  style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400)),
+              Text(
+                'Toca para emitir un nuevo ticket de ingreso',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
             ],
           ),
         ),
@@ -441,8 +519,9 @@ class _NuevoTicketButton extends StatelessWidget {
   }
 }
 
-//  Historial integrado 
-
+// =============================================================================
+// _HistorialInline
+// =============================================================================
 class _HistorialInline extends StatelessWidget {
   final List<TicketModel> tickets;
   final bool cargando;
@@ -453,47 +532,39 @@ class _HistorialInline extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Encabezado de sección
+        // Header
         Row(
           children: [
             const Icon(Icons.receipt_long_rounded,
-                color: Color(0xFF0052CC), size: 20),
+                color: _AppColors.primary, size: 20),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text('TICKETS DE HOY',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A1A1A),
-                      letterSpacing: 0.5)),
-            ),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE3F0FF),
-                borderRadius: BorderRadius.circular(20),
+              child: Text(
+                'TICKETS DE HOY',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: _AppColors.text,
+                  letterSpacing: 0.5,
+                ),
               ),
-              child: Text('${tickets.length} EMITIDOS',
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                      color: Color(0xFF0052CC))),
             ),
+            _CountBadge(count: tickets.length),
           ],
         ),
         const SizedBox(height: 12),
 
-        // Contenido
+        // Body
         if (cargando)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
             child: Center(child: CircularProgressIndicator()),
           )
         else if (tickets.isEmpty)
-          _EmptyState()
+          const _EmptyState()
         else
+          // ListView.builder con shrinkWrap dentro de un Column/ScrollView
+          // es aceptable aquí porque la lista de hoy raramente supera ~200 items.
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -505,7 +576,37 @@ class _HistorialInline extends StatelessWidget {
   }
 }
 
+class _CountBadge extends StatelessWidget {
+  final int count;
+  const _CountBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: _AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$count EMITIDOS',
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+          color: _AppColors.primary,
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _EmptyState  (ahora const)
+// =============================================================================
 class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -519,20 +620,28 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(Icons.inbox_rounded, size: 52, color: Colors.grey.shade300),
           const SizedBox(height: 10),
-          Text('Sin tickets hoy',
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade400)),
+          Text(
+            'Sin tickets hoy',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade400,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('Los tickets emitidos aparecerán aquí',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+          Text(
+            'Los tickets emitidos aparecerán aquí',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+          ),
         ],
       ),
     );
   }
 }
 
+// =============================================================================
+// _TicketItem
+// =============================================================================
 class _TicketItem extends StatelessWidget {
   final TicketModel ticket;
   const _TicketItem({required this.ticket});
@@ -543,7 +652,8 @@ class _TicketItem extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Anular Ticket'),
         content: Text(
-            '¿Desea anular el ticket #${ticket.ticketId}? Esta acción no se puede deshacer.'),
+          '¿Desea anular el ticket #${ticket.ticketId}? Esta acción no se puede deshacer.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -567,10 +677,19 @@ class _TicketItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hora = DateFormat('HH:mm').format(ticket.hora);
+    // Variables locales para evitar accesos repetidos al objeto
+    final anulado = ticket.anulado;
+    final hora = _fmtHora.format(ticket.hora);
     final totalPax = ticket.adultos + ticket.ninos;
     final esEfectivo = ticket.metodoPago == 'efectivo';
-    final anulado = ticket.anulado;
+
+    // Colores derivados del estado — calculados una vez
+    final idBgColor = anulado ? Colors.red.shade50 : _AppColors.primaryLight;
+    final idTextColor = anulado ? Colors.red.shade400 : _AppColors.primary;
+    final mainTextColor = anulado ? Colors.grey.shade400 : _AppColors.text;
+    final badgeBgColor = anulado ? Colors.red.shade50 : _AppColors.greenLight;
+    final badgeTextColor = anulado ? Colors.red.shade400 : _AppColors.green;
+    final textDecoration = anulado ? TextDecoration.lineThrough : null;
 
     return GestureDetector(
       onLongPress: anulado ? null : () => _confirmarAnulacion(context),
@@ -581,42 +700,39 @@ class _TicketItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: (anulado ? Colors.red : const Color(0xFF0052CC))
-                    .withValues(alpha: 0.07),
-                blurRadius: 8,
-                offset: const Offset(0, 3))
+              color: (anulado ? Colors.red : _AppColors.primary)
+                  .withValues(alpha: 0.07),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
           ],
           border: anulado
-              ? Border.all(color: Colors.red.shade200, width: 1)
+              ? Border.all(color: Colors.red.shade200)
               : null,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              // Ticket ID badge
+              // ID badge
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: anulado
-                      ? Colors.red.shade50
-                      : const Color(0xFFE3F0FF),
+                  color: idBgColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   '#${ticket.ticketId.toString().padLeft(4, '0')}',
                   style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: anulado
-                          ? Colors.red.shade400
-                          : const Color(0xFF0052CC)),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: idTextColor,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
 
-              // Info
+              // Info central
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,13 +740,11 @@ class _TicketItem extends StatelessWidget {
                     Text(
                       _paxLabel(ticket.adultos, ticket.ninos),
                       style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: anulado
-                              ? Colors.grey.shade400
-                              : const Color(0xFF1A1A1A),
-                          decoration:
-                              anulado ? TextDecoration.lineThrough : null),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: mainTextColor,
+                        decoration: textDecoration,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Row(
@@ -638,10 +752,11 @@ class _TicketItem extends StatelessWidget {
                         Icon(Icons.access_time_rounded,
                             size: 11, color: Colors.grey.shade400),
                         const SizedBox(width: 3),
-                        Text(hora,
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade500)),
+                        Text(
+                          hora,
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade500),
+                        ),
                         const SizedBox(width: 8),
                         Icon(
                           esEfectivo
@@ -652,8 +767,8 @@ class _TicketItem extends StatelessWidget {
                         ),
                         const SizedBox(width: 3),
                         Text(
-                          ticket.metodoPago[0].toUpperCase() +
-                              ticket.metodoPago.substring(1),
+                          '${ticket.metodoPago[0].toUpperCase()}'
+                          '${ticket.metodoPago.substring(1)}',
                           style: TextStyle(
                               fontSize: 11, color: Colors.grey.shade500),
                         ),
@@ -663,39 +778,34 @@ class _TicketItem extends StatelessWidget {
                 ),
               ),
 
-              // Monto + badge
+              // Monto + pax badge
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     'S/ ${ticket.monto.toStringAsFixed(2)}',
                     style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: anulado
-                            ? Colors.grey.shade400
-                            : const Color(0xFF1A1A1A),
-                        decoration:
-                            anulado ? TextDecoration.lineThrough : null),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: mainTextColor,
+                      decoration: textDecoration,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: anulado
-                          ? Colors.red.shade50
-                          : const Color(0xFFE8F5E9),
+                      color: badgeBgColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       anulado ? 'ANULADO' : '$totalPax pax',
                       style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: anulado
-                              ? Colors.red.shade400
-                              : const Color(0xFF21BA45)),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: badgeTextColor,
+                      ),
                     ),
                   ),
                 ],
@@ -707,7 +817,8 @@ class _TicketItem extends StatelessWidget {
     );
   }
 
-  String _paxLabel(int adultos, int ninos) {
+  /// Genera etiqueta de pasajeros: "2 adultos + 1 niño"
+  static String _paxLabel(int adultos, int ninos) {
     final parts = <String>[];
     if (adultos > 0) parts.add('$adultos adulto${adultos > 1 ? 's' : ''}');
     if (ninos > 0) parts.add('$ninos niño${ninos > 1 ? 's' : ''}');

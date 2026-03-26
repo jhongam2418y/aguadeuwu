@@ -5,178 +5,140 @@ import '../providers/ticket_provider.dart';
 import 'ticket_preview_screen.dart';
 import '../../../../core/app_colors.dart';
 
+// =============================================================================
+// BoleteriaScreen
+// =============================================================================
 class BoleteriaScreen extends StatefulWidget {
   const BoleteriaScreen({super.key});
+
   @override
   State<BoleteriaScreen> createState() => _BoleteriaScreenState();
 }
 
 class _BoleteriaScreenState extends State<BoleteriaScreen> {
-  int adultos = 0;
-  int ninos = 0;
-  String metodoPago = 'efectivo';
+  int _adultos = 0;
+  int _ninos = 0;
+  String _metodoPago = 'efectivo';
 
-  // Fixed the syntax error and added the missing body for _precioAdulto
+  // ── Helpers de precio (sin lógica de UI, solo cálculos) ──────────────────
+
   double _precioAdulto(ConfigProvider cfg) =>
       cfg.precioAdulto(DateTime.now().weekday);
+
   double _precioNino(ConfigProvider cfg) =>
       cfg.precioNino(DateTime.now().weekday);
 
-  double _total(ConfigProvider cfg) =>
-      adultos * _precioAdulto(cfg) + ninos * _precioNino(cfg);
+  double _calcTotal(ConfigProvider cfg) =>
+      _adultos * _precioAdulto(cfg) + _ninos * _precioNino(cfg);
 
-  void _resetear() {
-    setState(() {
-      adultos = 0;
-      ninos = 0;
-      metodoPago = 'efectivo';
-    });
-  }
+  void _resetear() => setState(() {
+        _adultos = 0;
+        _ninos = 0;
+        _metodoPago = 'efectivo';
+      });
 
-    Future<int?> _irAPreview(ConfigProvider cfg) async {
-    // 1. Validaciones iniciales con retorno nulo
-    if (adultos + ninos == 0) return null;
-    if (!mounted) return null;
+  // ── Navegación a preview ──────────────────────────────────────────────────
+
+  Future<void> _irAPreview(ConfigProvider cfg) async {
+    if (_adultos + _ninos == 0 || !mounted) return;
 
     final provider = context.read<TicketProvider>();
+    final precioAdulto = _precioAdulto(cfg);
+    final precioNino = _precioNino(cfg);
+    final total = _calcTotal(cfg);
 
-    // 2. Navegación
-    // Usamos "await" aquí por si quieres esperar a que la pantalla se cierre
-    await Navigator.push(
+    // Capturamos los valores actuales antes de navegar para evitar
+    // que un rebuild los mute mientras la pantalla está abierta.
+    final adultoSnap = _adultos;
+    final ninoSnap = _ninos;
+    final metodoSnap = _metodoPago;
+
+    await Navigator.push<void>(
       context,
       MaterialPageRoute(
         builder: (_) => TicketPreviewScreen(
-          adultos: adultos,
-          ninos: ninos,
-          precioAdulto: _precioAdulto(cfg),
-          precioNino: _precioNino(cfg),
-          total: _total(cfg),
-          metodoPago: metodoPago,
+          adultos: adultoSnap,
+          ninos: ninoSnap,
+          precioAdulto: precioAdulto,
+          precioNino: precioNino,
+          total: total,
+          metodoPago: metodoSnap,
           onSalir: _resetear,
           onGuardar: () async {
             final ticket = await provider.agregarTicket(
-              adultos: adultos,
-              ninos: ninos,
-              monto: _total(cfg),
-              metodoPago: metodoPago,
+              adultos: adultoSnap,
+              ninos: ninoSnap,
+              monto: total,
+              metodoPago: metodoSnap,
             );
-
-            // Verificación de seguridad después de un proceso asíncrono
-            if (!mounted) return -1; 
-
-            Navigator.pop(context); 
-            _resetear(); 
-            
-            return ticket.id; // Retorna el ID del ticket guardado
+            if (!mounted) return -1;
+            Navigator.pop(context);
+            _resetear();
+            return ticket.id;
           },
         ),
       ),
     );
-
-    // 3. Retorno final obligatorio
-    // Como la función principal es Future<int?>, necesita este return al final
-    return null; 
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    // Selector selectivo: solo reconstruye cuando cambian precios
     final cfg = context.watch<ConfigProvider>();
     final precioAdulto = _precioAdulto(cfg);
     final precioNino = _precioNino(cfg);
-    final total = _total(cfg);
+    final total = _calcTotal(cfg);
+    final habilitado = _adultos + _ninos > 0;
 
     return Scaffold(
       backgroundColor: AppColors.lightBlueBackground,
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBackTap: () => Navigator.pop(context)),
+            const _Header(),
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Panel izquierdo: selectores ──────────────────────────
+                  // Panel izquierdo
                   Expanded(
                     flex: 3,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const _SectionLabel(texto: 'SELECCIONE CANTIDAD'),
-                          const SizedBox(height: 10),
-                          Expanded(
-                            child: _ContadorCard(
-                              label: 'Adultos',
-                              precio: precioAdulto,
-                              icono: Icons.person_rounded,
-                              valor: adultos,
-                              onChanged: (v) => setState(() => adultos = v),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Expanded(
-                            child: _ContadorCard(
-                              label: 'Niños',
-                              precio: precioNino,
-                              icono: Icons.child_care_rounded,
-                              valor: ninos,
-                              onChanged: (v) => setState(() => ninos = v),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const _SectionLabel(texto: 'MÉTODO DE PAGO'),
-                          const SizedBox(height: 10),
-                          _SelectorPago(
-                            seleccionado: metodoPago,
-                            onChanged: (v) => setState(() => metodoPago = v),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      ),
+                    child: _LeftPanel(
+                      adultos: _adultos,
+                      ninos: _ninos,
+                      precioAdulto: precioAdulto,
+                      precioNino: precioNino,
+                      metodoPago: _metodoPago,
+                      onAdultosChanged: (v) => setState(() => _adultos = v),
+                      onNinosChanged: (v) => setState(() => _ninos = v),
+                      onMetodoPagoChanged: (v) =>
+                          setState(() => _metodoPago = v),
                     ),
                   ),
-                  // ── Divisor ──────────────────────────────────────────────
-                  Container(
-                    width: 1,
-                    color: const Color(0xFFCCE0FF),
-                    margin: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  // ── Panel derecho: vista previa ──────────────────────────
+                  // Divisor
+                  const _VerticalDivider(),
+                  // Panel derecho
                   Expanded(
                     flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 20, 20, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const _SectionLabel(texto: 'VISTA PREVIA DEL TICKET'),
-                          const SizedBox(height: 12),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: _TicketPreviewCard(
-                                adultos: adultos,
-                                ninos: ninos,
-                                precioAdulto: precioAdulto,
-                                precioNino: precioNino,
-                                total: total,
-                                metodoPago: metodoPago,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    child: _RightPanel(
+                      adultos: _adultos,
+                      ninos: _ninos,
+                      precioAdulto: precioAdulto,
+                      precioNino: precioNino,
+                      total: total,
+                      metodoPago: _metodoPago,
                     ),
                   ),
                 ],
               ),
             ),
             _BottomBar(
-              adultos: adultos,
-              ninos: ninos,
+              adultos: _adultos,
+              ninos: _ninos,
               total: total,
-              habilitado: adultos + ninos > 0,
+              habilitado: habilitado,
               onTap: () => _irAPreview(cfg),
             ),
           ],
@@ -186,11 +148,123 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   }
 }
 
-// ─── Widgets internos ────────────────────────────────────────────────────────
+// =============================================================================
+// Paneles principales (evitan rebuilds innecesarios siendo StatelessWidget)
+// =============================================================================
+
+class _LeftPanel extends StatelessWidget {
+  final int adultos;
+  final int ninos;
+  final double precioAdulto;
+  final double precioNino;
+  final String metodoPago;
+  final ValueChanged<int> onAdultosChanged;
+  final ValueChanged<int> onNinosChanged;
+  final ValueChanged<String> onMetodoPagoChanged;
+
+  const _LeftPanel({
+    required this.adultos,
+    required this.ninos,
+    required this.precioAdulto,
+    required this.precioNino,
+    required this.metodoPago,
+    required this.onAdultosChanged,
+    required this.onNinosChanged,
+    required this.onMetodoPagoChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _SectionLabel(texto: 'SELECCIONE CANTIDAD'),
+          const SizedBox(height: 10),
+          Expanded(
+            child: _ContadorCard(
+              label: 'Adultos',
+              precio: precioAdulto,
+              icono: Icons.person_rounded,
+              valor: adultos,
+              onChanged: onAdultosChanged,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: _ContadorCard(
+              label: 'Niños',
+              precio: precioNino,
+              icono: Icons.child_care_rounded,
+              valor: ninos,
+              onChanged: onNinosChanged,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const _SectionLabel(texto: 'MÉTODO DE PAGO'),
+          const SizedBox(height: 10),
+          _SelectorPago(
+            seleccionado: metodoPago,
+            onChanged: onMetodoPagoChanged,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _RightPanel extends StatelessWidget {
+  final int adultos;
+  final int ninos;
+  final double precioAdulto;
+  final double precioNino;
+  final double total;
+  final String metodoPago;
+
+  const _RightPanel({
+    required this.adultos,
+    required this.ninos,
+    required this.precioAdulto,
+    required this.precioNino,
+    required this.total,
+    required this.metodoPago,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _SectionLabel(texto: 'VISTA PREVIA DEL TICKET'),
+          const SizedBox(height: 12),
+          Expanded(
+            child: SingleChildScrollView(
+              child: _TicketPreviewCard(
+                adultos: adultos,
+                ninos: ninos,
+                precioAdulto: precioAdulto,
+                precioNino: precioNino,
+                total: total,
+                metodoPago: metodoPago,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Widgets de UI
+// =============================================================================
 
 class _Header extends StatelessWidget {
-  final VoidCallback onBackTap;
-  const _Header({required this.onBackTap});
+  const _Header();
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +281,7 @@ class _Header extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: onBackTap,
+            onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_rounded,
                 color: Colors.white, size: 28),
             tooltip: 'Volver',
@@ -225,7 +299,8 @@ class _Header extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1)),
                 Text('Emisión de comprobante de ingreso',
-                    style: TextStyle(color: AppColors.lightGrey, fontSize: 12)),
+                    style:
+                        TextStyle(color: AppColors.lightGrey, fontSize: 12)),
               ],
             ),
           ),
@@ -243,7 +318,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(0x18), // Correct way to set alpha
+                  color: Colors.white.withAlpha(0x18),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text('BOLETERÍA',
@@ -257,6 +332,20 @@ class _Header extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Divisor vertical entre paneles
+class _VerticalDivider extends StatelessWidget {
+  const _VerticalDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      color: const Color(0xFFCCE0FF),
+      margin: const EdgeInsets.symmetric(vertical: 16),
     );
   }
 }
@@ -278,12 +367,16 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+// =============================================================================
+// _ContadorCard
+// =============================================================================
 class _ContadorCard extends StatelessWidget {
   final String label;
   final double precio;
   final IconData icono;
   final int valor;
   final ValueChanged<int> onChanged;
+
   const _ContadorCard({
     required this.label,
     required this.precio,
@@ -301,22 +394,24 @@ class _ContadorCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: AppColors.blueOpacity09, // Correct way to set alpha
+              color: AppColors.blueOpacity09,
               blurRadius: 12,
               offset: const Offset(0, 4))
         ],
       ),
       child: Row(
         children: [
+          // Ícono izquierdo
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.blueOpacity10, // Correct way to set alpha
+              color: AppColors.blueOpacity10,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icono, color: AppColors.primaryBlue, size: 36),
           ),
           const SizedBox(width: 18),
+          // Etiqueta y precio
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -331,15 +426,17 @@ class _ContadorCard extends StatelessWidget {
                 Text('S/ ${precio.toStringAsFixed(2)} c/u',
                     style: const TextStyle(
                         fontSize: 16,
-                        color:AppColors.primaryBlue,
+                        color: AppColors.primaryBlue,
                         fontWeight: FontWeight.w500)),
               ],
             ),
           ),
+          // Controles: menos / valor / más
           _FlechaBtn(
-              icono: Icons.remove_rounded,
-              habilitado: valor > 0,
-              onTap: () => onChanged(valor - 1)),
+            icono: Icons.remove_rounded,
+            habilitado: valor > 0,
+            onTap: () => onChanged(valor - 1),
+          ),
           SizedBox(
             width: 72,
             child: Center(
@@ -351,21 +448,29 @@ class _ContadorCard extends StatelessWidget {
             ),
           ),
           _FlechaBtn(
-              icono: Icons.add_rounded,
-              habilitado: true,
-              onTap: () => onChanged(valor + 1)),
+            icono: Icons.add_rounded,
+            habilitado: true,
+            onTap: () => onChanged(valor + 1),
+          ),
         ],
       ),
     );
   }
 }
 
+// =============================================================================
+// _FlechaBtn
+// =============================================================================
 class _FlechaBtn extends StatelessWidget {
   final IconData icono;
   final bool habilitado;
   final VoidCallback onTap;
-  const _FlechaBtn(
-      {required this.icono, required this.habilitado, required this.onTap});
+
+  const _FlechaBtn({
+    required this.icono,
+    required this.habilitado,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -380,69 +485,76 @@ class _FlechaBtn extends StatelessWidget {
           boxShadow: habilitado
               ? [
                   BoxShadow(
-                      color: AppColors.blueOpacity35, // Correct way to set alpha
+                      color: AppColors.blueOpacity35,
                       blurRadius: 8,
                       offset: const Offset(0, 3))
                 ]
-              : [],
+              : const [],
         ),
-        child: Icon(icono,
-            color: habilitado ? Colors.white : Colors.grey.shade400, size: 28),
+        child: Icon(
+          icono,
+          color: habilitado ? Colors.white : Colors.grey.shade400,
+          size: 28,
+        ),
       ),
     );
   }
 }
 
+// =============================================================================
+// _SelectorPago
+// =============================================================================
+
+// Datos de cada método de pago centralizados para no repetir strings sueltos
+class _MetodoPagoData {
+  final String valor;
+  final String label;
+  final IconData icono;
+  const _MetodoPagoData(this.valor, this.label, this.icono);
+}
+
+const _metodosPago = [
+  _MetodoPagoData('efectivo', 'Efectivo', Icons.payments_rounded),
+  _MetodoPagoData('yape', 'Yape', Icons.phone_android_rounded),
+  _MetodoPagoData('plin', 'Plin', Icons.mobile_friendly_rounded),
+];
+
 class _SelectorPago extends StatelessWidget {
   final String seleccionado;
   final ValueChanged<String> onChanged;
-  const _SelectorPago(
-      {required this.seleccionado, required this.onChanged});
+
+  const _SelectorPago({required this.seleccionado, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _ChipPago(
-            valor: 'efectivo',
-            label: 'Efectivo',
-            icono: Icons.payments_rounded,
-            seleccionado: seleccionado,
-            onTap: () => onChanged('efectivo')),
-        const SizedBox(width: 10),
-        _ChipPago(
-            valor: 'yape',
-            label: 'Yape',
-            icono: Icons.phone_android_rounded,
-            seleccionado: seleccionado,
-            onTap: () => onChanged('yape')),
-        const SizedBox(width: 10),
-        _ChipPago(
-            valor: 'plin',
-            label: 'Plin',
-            icono: Icons.mobile_friendly_rounded,
-            seleccionado: seleccionado,
-            onTap: () => onChanged('plin')),
+        for (int i = 0; i < _metodosPago.length; i++) ...[
+          if (i > 0) const SizedBox(width: 10),
+          _ChipPago(
+            data: _metodosPago[i],
+            activo: seleccionado == _metodosPago[i].valor,
+            onTap: () => onChanged(_metodosPago[i].valor),
+          ),
+        ],
       ],
     );
   }
 }
 
 class _ChipPago extends StatelessWidget {
-  final String valor, label, seleccionado;
-  final IconData icono;
+  final _MetodoPagoData data;
+  final bool activo;
   final VoidCallback onTap;
+
   const _ChipPago({
-    required this.valor,
-    required this.label,
-    required this.icono,
-    required this.seleccionado,
+    required this.data,
+    required this.activo,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final activo = seleccionado == valor;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -460,19 +572,19 @@ class _ChipPago extends StatelessWidget {
             boxShadow: activo
                 ? [
                     BoxShadow(
-                        color: AppColors.blueOpacity28, // Correct way to set alpha
+                        color: AppColors.blueOpacity28,
                         blurRadius: 8,
                         offset: const Offset(0, 4))
                   ]
-                : [],
+                : const [],
           ),
           child: Column(
             children: [
-              Icon(icono,
+              Icon(data.icono,
                   color: activo ? Colors.white : AppColors.primaryBlue,
                   size: 22),
               const SizedBox(height: 5),
-              Text(label,
+              Text(data.label,
                   style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -486,8 +598,12 @@ class _ChipPago extends StatelessWidget {
   }
 }
 
+// =============================================================================
+// _BottomBar
+// =============================================================================
 class _BottomBar extends StatelessWidget {
-  final int adultos, ninos;
+  final int adultos;
+  final int ninos;
   final double total;
   final bool habilitado;
   final VoidCallback onTap;
@@ -507,12 +623,12 @@ class _BottomBar extends StatelessWidget {
       decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(
-              color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
         ],
       ),
       child: Row(
         children: [
+          // Resumen de venta
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,11 +647,11 @@ class _BottomBar extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         color: AppColors.primaryBlue)),
                 Text('Adultos: $adultos   Niños: $ninos',
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
           ),
+          // Total
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
@@ -557,6 +673,7 @@ class _BottomBar extends StatelessWidget {
               ],
             ),
           ),
+          // Botón imprimir
           ElevatedButton.icon(
             onPressed: habilitado ? onTap : null,
             icon: const Icon(Icons.print_rounded, size: 26),
@@ -582,9 +699,15 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
+// =============================================================================
+// _TicketPreviewCard
+// =============================================================================
 class _TicketPreviewCard extends StatelessWidget {
-  final int adultos, ninos;
-  final double precioAdulto, precioNino, total;
+  final int adultos;
+  final int ninos;
+  final double precioAdulto;
+  final double precioNino;
+  final double total;
   final String metodoPago;
 
   const _TicketPreviewCard({
@@ -596,58 +719,35 @@ class _TicketPreviewCard extends StatelessWidget {
     required this.metodoPago,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final h = now.hour;
+  /// Formatea la fecha/hora actual en 12h sin intl para no añadir dependencia.
+  String get _fechaHora {
+    final n = DateTime.now();
+    final h = n.hour;
     final ampm = h < 12 ? 'AM' : 'PM';
     final h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-    final fecha =
-        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year} '
-        '${h12.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $ampm';
+    return '${n.day.toString().padLeft(2, '0')}/'
+        '${n.month.toString().padLeft(2, '0')}/${n.year} '
+        '${h12.toString().padLeft(2, '0')}:'
+        '${n.minute.toString().padLeft(2, '0')} $ampm';
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.blueOpacity10, // Correct way to set alpha
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
+              color: AppColors.blueOpacity10,
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
         children: [
-          // Cabecera azul
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: const BoxDecoration(
-              color: AppColors.primaryBlue,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: const Column(
-              children: [
-                Text('PISCIGRANJA',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 17,
-                        letterSpacing: 2)),
-                SizedBox(height: 3),
-                Text('TICKET DE INGRESO',
-                    style: TextStyle(
-                        color: AppColors.lightGrey,
-                        fontSize: 10,
-                        letterSpacing: 1.5)),
-              ],
-            ),
-          ),
+          // Cabecera
+          _TicketHeader(),
           // Cabecera de tabla
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
@@ -690,6 +790,7 @@ class _TicketPreviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Divider(indent: 14, endIndent: 14, thickness: 1.5),
+          // Total
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
             child: Row(
@@ -716,42 +817,17 @@ class _TicketPreviewCard extends StatelessWidget {
             child: Column(
               children: [
                 Text('PAGO: ${metodoPago.toUpperCase()}',
-                    style:
-                        const TextStyle(fontSize: 10, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 const SizedBox(height: 2),
-                Text('FECHA: $fecha',
-                    style:
-                        const TextStyle(fontSize: 10, color: Colors.grey)),
+                Text('FECHA: $_fechaHora',
+                    style: const TextStyle(fontSize: 10, color: Colors.grey)),
               ],
             ),
           ),
-          // QR placeholder
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Center(
-              child: SizedBox(
-                width: 52,
-                height: 52,
-                child: GridView.count(
-                  crossAxisCount: 4,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: List.generate(
-                    16,
-                    (i) => Container(
-                      margin: const EdgeInsets.all(1.5),
-                      color: const [
-                            true,  false, true,  true,
-                            false, true,  false, true,
-                            true,  false, true,  false,
-                            true,  true,  false, true,
-                          ][i]
-                          ? Colors.grey.shade400
-                          : Colors.transparent,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          // QR decorativo
+          const Padding(
+            padding: EdgeInsets.all(14),
+            child: _QrPlaceholder(),
           ),
         ],
       ),
@@ -759,6 +835,78 @@ class _TicketPreviewCard extends StatelessWidget {
   }
 }
 
+// Cabecera azul del ticket preview (extraída para no reconstruirla)
+class _TicketHeader extends StatelessWidget {
+  const _TicketHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: const BoxDecoration(
+        color: AppColors.primaryBlue,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      child: const Column(
+        children: [
+          Text('PISCIGRANJA',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 17,
+                  letterSpacing: 2)),
+          SizedBox(height: 3),
+          Text('TICKET DE INGRESO',
+              style: TextStyle(
+                  color: AppColors.lightGrey,
+                  fontSize: 10,
+                  letterSpacing: 1.5)),
+        ],
+      ),
+    );
+  }
+}
+
+// QR decorativo extraído para ser const y no reconstruirse nunca
+class _QrPlaceholder extends StatelessWidget {
+  const _QrPlaceholder();
+
+  static const _pattern = [
+    true,  false, true,  true,
+    false, true,  false, true,
+    true,  false, true,  false,
+    true,  true,  false, true,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: 52,
+        height: 52,
+        child: GridView.count(
+          crossAxisCount: 4,
+          physics: const NeverScrollableScrollPhysics(),
+          children: List.generate(
+            16,
+            (i) => Container(
+              margin: const EdgeInsets.all(1.5),
+              color: _pattern[i] ? Colors.grey.shade400 : Colors.transparent,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _PreviewRow
+// =============================================================================
 class _PreviewRow extends StatelessWidget {
   final int cant;
   final String label;
@@ -798,5 +946,3 @@ class _PreviewRow extends StatelessWidget {
     );
   }
 }
-
-

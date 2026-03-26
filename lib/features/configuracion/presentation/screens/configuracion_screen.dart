@@ -2,144 +2,175 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/config_provider.dart';
 import '../../data/models/config_model.dart';
 import '../../../tickets/data/models/ticket_model.dart';
 import '../../../tickets/presentation/providers/ticket_provider.dart';
 
+// ─── Constantes de diseño ────────────────────────────────────────────────────
+abstract final class _C {
+  static const primary     = Color(0xFF0052CC);
+  static const primaryLight = Color(0xFFE3F0FF);
+  static const greenLight  = Color(0xFFE8F5E9);
+  static const green       = Color(0xFF21BA45);
+  static const text        = Color(0xFF1A1A1A);
+  static const background  = Color(0xFFF0F7FF);
+  static const headerBg    = Color(0xFFF8FAFD);
+  static const rowAlt      = Color(0xFFFAFBFF);
+  static const borderBlue  = Color(0xFFCCE0FF);
+  static const orange      = Color(0xFFF2711C);
+}
+
+// Formateadores — instanciados una sola vez
+final _fmtResumen  = DateFormat("dd MMM, yyyy", 'es');
+final _fmtFechaRow = DateFormat("dd MMM, yyyy", 'es');
+final _fmtHoraRow  = DateFormat('hh:mm a');
+
+// Metadatos por día de semana (índice 0 = Lunes)
+const _dayIcons = [
+  Icons.work_outline_rounded,
+  Icons.work_outline_rounded,
+  Icons.work_outline_rounded,
+  Icons.work_outline_rounded,
+  Icons.work_outline_rounded,
+  Icons.wb_sunny_rounded,
+  Icons.wb_sunny_rounded,
+];
+const _dayColors = [
+  _C.primary, _C.primary, _C.primary, _C.primary, _C.primary,
+  _C.orange,  _C.orange,
+];
+
+// =============================================================================
+// ConfiguracionScreen
+// =============================================================================
 class ConfiguracionScreen extends StatefulWidget {
   final int paginaInicial;
   const ConfiguracionScreen({super.key, this.paginaInicial = 0});
+
   @override
   State<ConfiguracionScreen> createState() => _ConfiguracionScreenState();
 }
 
 class _ConfiguracionScreenState extends State<ConfiguracionScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  late List<TextEditingController> _adultoCtrls;
-  late List<TextEditingController> _ninoCtrls;
-  late TextEditingController _impresoraCtrl;
+  // ── Controllers ─────────────────────────────────────────────────────────────
+  late final TabController _tabController;
+  late final List<TextEditingController> _adultoCtrls;
+  late final List<TextEditingController> _ninoCtrls;
+  late final TextEditingController _impresoraCtrl;
 
-  // Historial state
-  DateTime _desde = DateTime.now();
-  DateTime _hasta = DateTime.now();
-  List<TicketModel> _historialTickets = [];
-  bool _historialCargando = false;
+  // ── Estado Historial ─────────────────────────────────────────────────────────
+  DateTime _desde           = DateTime.now();
+  DateTime _hasta           = DateTime.now();
+  List<TicketModel> _historial = [];
+  bool _historialCargando   = false;
 
-  static const _dayIcons = [
-    Icons.work_outline_rounded,
-    Icons.work_outline_rounded,
-    Icons.work_outline_rounded,
-    Icons.work_outline_rounded,
-    Icons.work_outline_rounded,
-    Icons.wb_sunny_rounded,
-    Icons.wb_sunny_rounded,
-  ];
+  // Índice del día actual (0 = Lunes … 6 = Domingo)
+  late final int _diaHoy = DateTime.now().weekday - 1;
 
-  static const _dayColors = [
-    Color(0xFF0052CC),
-    Color(0xFF0052CC),
-    Color(0xFF0052CC),
-    Color(0xFF0052CC),
-    Color(0xFF0052CC),
-    Color(0xFFF2711C),
-    Color(0xFFF2711C),
-  ];
-
+  // ── Ciclo de vida ────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
     _tabController = TabController(
-        length: 3, vsync: this, initialIndex: widget.paginaInicial);
+      length: 3,
+      vsync: this,
+      initialIndex: widget.paginaInicial,
+    );
     final cfg = context.read<ConfigProvider>().config;
     _adultoCtrls = List.generate(
-        7, (i) => TextEditingController(text: cfg.preciosAdulto[i].toStringAsFixed(2)));
+      7, (i) => TextEditingController(text: cfg.preciosAdulto[i].toStringAsFixed(2)),
+    );
     _ninoCtrls = List.generate(
-        7, (i) => TextEditingController(text: cfg.preciosNino[i].toStringAsFixed(2)));
+      7, (i) => TextEditingController(text: cfg.preciosNino[i].toStringAsFixed(2)),
+    );
     _impresoraCtrl = TextEditingController(text: cfg.nombreImpresora);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    for (final c in _adultoCtrls) {
-      c.dispose();
-    }
-    for (final c in _ninoCtrls) {
-      c.dispose();
-    }
+    for (final c in [..._adultoCtrls, ..._ninoCtrls]) c.dispose();
     _impresoraCtrl.dispose();
     super.dispose();
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  void _showSnack(String msg, {Color bg = _C.primary}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg), backgroundColor: bg));
+  }
+
   void _ajustar(TextEditingController ctrl, double delta) {
     final current = double.tryParse(ctrl.text) ?? 0;
-    final nuevo = (current + delta).clamp(0.0, 9999.0);
-    ctrl.text = nuevo.toStringAsFixed(2);
+    ctrl.text = (current + delta).clamp(0.0, 9999.0).toStringAsFixed(2);
     setState(() {});
   }
 
+  // ── Acciones Precios ─────────────────────────────────────────────────────────
+
   Future<void> _guardarPrecios() async {
     final adultos = _adultoCtrls.map((c) => double.tryParse(c.text) ?? 0).toList();
-    final ninos = _ninoCtrls.map((c) => double.tryParse(c.text) ?? 0).toList();
+    final ninos   = _ninoCtrls.map((c) => double.tryParse(c.text) ?? 0).toList();
     if (adultos.any((p) => p <= 0) || ninos.any((p) => p <= 0)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Todos los precios deben ser mayores a 0')));
+      _showSnack('Todos los precios deben ser mayores a 0', bg: Colors.orange);
       return;
     }
-    await context
-        .read<ConfigProvider>()
-        .actualizarPrecios(preciosAdulto: adultos, preciosNino: ninos);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Precios guardados'),
-        backgroundColor: Color(0xFF0052CC)));
+    await context.read<ConfigProvider>().actualizarPrecios(
+      preciosAdulto: adultos,
+      preciosNino:   ninos,
+    );
+    _showSnack('Precios guardados');
   }
 
+  // ── Acciones Impresora ───────────────────────────────────────────────────────
+
   Future<void> _guardarImpresora() async {
-    await context
-        .read<ConfigProvider>()
-        .actualizarImpresora(_impresoraCtrl.text.trim());
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Impresora guardada'),
-        backgroundColor: Color(0xFF0052CC)));
+    await context.read<ConfigProvider>().actualizarImpresora(
+      _impresoraCtrl.text.trim(),
+    );
+    _showSnack('Impresora guardada');
   }
+
+  // ── Acciones Historial ───────────────────────────────────────────────────────
 
   Future<void> _seleccionarFecha(bool esDesde) async {
     final inicial = esDesde ? _desde : _hasta;
-    final fecha = await showDatePicker(
+    final fecha   = await showDatePicker(
       context: context,
       initialDate: inicial,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       locale: const Locale('es'),
     );
-    if (fecha != null) {
-      setState(() {
-        if (esDesde) {
-          _desde = fecha;
-          if (_desde.isAfter(_hasta)) _hasta = _desde;
-        } else {
-          _hasta = fecha;
-          if (_hasta.isBefore(_desde)) _desde = _hasta;
-        }
-      });
-      _cargarHistorial();
-    }
+    if (fecha == null) return;
+    setState(() {
+      if (esDesde) {
+        _desde = fecha;
+        if (_desde.isAfter(_hasta)) _hasta = _desde;
+      } else {
+        _hasta = fecha;
+        if (_hasta.isBefore(_desde)) _desde = _hasta;
+      }
+    });
+    await _cargarHistorial();
   }
 
   Future<void> _cargarHistorial() async {
     setState(() => _historialCargando = true);
     try {
-      _historialTickets = await context
+      _historial = await context
           .read<TicketProvider>()
           .obtenerTicketsPorRango(_desde, _hasta);
     } catch (_) {
-      _historialTickets = [];
+      _historial = [];
+    } finally {
+      if (mounted) setState(() => _historialCargando = false);
     }
-    if (mounted) setState(() => _historialCargando = false);
   }
 
   Future<void> _anularDesdeHistorial(TicketModel ticket) async {
@@ -148,7 +179,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
       builder: (ctx) => AlertDialog(
         title: const Text('Anular Ticket'),
         content: Text(
-            '¿Desea anular el ticket #${ticket.ticketId}? Esta acción no se puede deshacer.'),
+          '¿Desea anular el ticket #${ticket.ticketId}? '
+          'Esta acción no se puede deshacer.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -167,16 +200,18 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
     );
     if (confirmar == true && mounted) {
       await context.read<TicketProvider>().anularTicket(ticket.id);
-      _cargarHistorial();
+      await _cargarHistorial();
     }
   }
+
+  // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F7FF),
+      backgroundColor: _C.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0052CC),
+        backgroundColor: _C.primary,
         foregroundColor: Colors.white,
         title: const Text('Configuración',
             style: TextStyle(fontWeight: FontWeight.w700)),
@@ -186,8 +221,8 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
           tabs: const [
-            Tab(icon: Icon(Icons.sell_rounded), text: 'Precios'),
-            Tab(icon: Icon(Icons.print_rounded), text: 'Impresora'),
+            Tab(icon: Icon(Icons.sell_rounded),    text: 'Precios'),
+            Tab(icon: Icon(Icons.print_rounded),   text: 'Impresora'),
             Tab(icon: Icon(Icons.history_rounded), text: 'Historial'),
           ],
         ),
@@ -195,610 +230,126 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          //  Tab Precios 
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Fila 1: Lunes – Jueves
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: List.generate(4, (i) => Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(left: i == 0 ? 0 : 12),
-                              child: _DiaCard(
-                                nombreDia: ConfigModel.nombresDias[i],
-                                icono: _dayIcons[i],
-                                color: _dayColors[i],
-                                adultoCtrl: _adultoCtrls[i],
-                                ninoCtrl: _ninoCtrls[i],
-                                onAjustar: _ajustar,
-                                esHoy: DateTime.now().weekday - 1 == i,
-                              ),
-                            ),
-                          )),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      // Fila 2: Viernes – Domingo
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: List.generate(3, (j) => Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(left: j == 0 ? 0 : 12),
-                              child: _DiaCard(
-                                nombreDia: ConfigModel.nombresDias[j + 4],
-                                icono: _dayIcons[j + 4],
-                                color: _dayColors[j + 4],
-                                adultoCtrl: _adultoCtrls[j + 4],
-                                ninoCtrl: _ninoCtrls[j + 4],
-                                onAjustar: _ajustar,
-                                esHoy: DateTime.now().weekday - 1 == j + 4,
-                              ),
-                            ),
-                          )),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-              child: SizedBox(
-                width: double.infinity,
-                height: 62, // altura fija generosa
-                child: ElevatedButton.icon(
-                  onPressed: _guardarPrecios,
-                  icon: const Icon(Icons.save_rounded, size: 26),
-                  label: const Text(
-                    'GUARDAR PRECIOS',
-                    style: TextStyle(
-                      fontSize: 18,             // era implícito ~14
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0052CC),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 4,
-                    shadowColor: const Color(0xFF0052CC).withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-            ),
-            ],
+          _TabPrecios(
+            diaHoy:      _diaHoy,
+            adultoCtrls: _adultoCtrls,
+            ninoCtrls:   _ninoCtrls,
+            onAjustar:   _ajustar,
+            onGuardar:   _guardarPrecios,
           ),
-          //  Tab Impresora 
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 4),
-                _ConfigCard(
-                  titulo: 'Nombre de la impresora',
-                  descripcion: 'Ingresa el nombre exacto del dispositivo',
-                  icono: Icons.print_rounded,
-                  child: TextField(
-                    controller: _impresoraCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Ej: POS-80C, EPSON TM-T20',
-                      border: OutlineInputBorder(),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: Color(0xFF0052CC), width: 2),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: _guardarImpresora,
-                  icon: const Icon(Icons.save_rounded),
-                  label: const Text('GUARDAR IMPRESORA',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700, letterSpacing: 1)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0052CC),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ],
-            ),
+          _TabImpresora(
+            ctrl:      _impresoraCtrl,
+            onGuardar: _guardarImpresora,
           ),
-          //  Tab Historial 
-          _buildHistorialTab(),
+          _TabHistorial(
+            desde:            _desde,
+            hasta:            _hasta,
+            historial:        _historial,
+            cargando:         _historialCargando,
+            onSelDesde:       () => _seleccionarFecha(true),
+            onSelHasta:       () => _seleccionarFecha(false),
+            onBuscar:         _cargarHistorial,
+            onAnular:         _anularDesdeHistorial,
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildHistorialTab() {
-    final fmt = DateFormat("dd MMM, yyyy", 'es');
-    final ticketsActivos =
-        _historialTickets.where((t) => !t.anulado).toList();
-    final totalIngresos =
-        ticketsActivos.fold<double>(0, (s, t) => s + t.monto);
-    final totalPersonas =
-        ticketsActivos.fold<int>(0, (s, t) => s + t.adultos + t.ninos);
-    final totalAnulados =
-        _historialTickets.where((t) => t.anulado).length;
+// =============================================================================
+// Tab Precios
+// =============================================================================
+class _TabPrecios extends StatelessWidget {
+  final int diaHoy;
+  final List<TextEditingController> adultoCtrls;
+  final List<TextEditingController> ninoCtrls;
+  final void Function(TextEditingController, double) onAjustar;
+  final VoidCallback onGuardar;
 
+  const _TabPrecios({
+    required this.diaHoy,
+    required this.adultoCtrls,
+    required this.ninoCtrls,
+    required this.onAjustar,
+    required this.onGuardar,
+  });
+
+  // Estilo del botón guardar — static para no recrearse
+  static final _saveStyle = ElevatedButton.styleFrom(
+    backgroundColor: _C.primary,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    elevation: 4,
+  );
+
+  Widget _diaCard(int i) => _DiaCard(
+        nombreDia:  ConfigModel.nombresDias[i],
+        icono:      _dayIcons[i],
+        color:      _dayColors[i],
+        adultoCtrl: adultoCtrls[i],
+        ninoCtrl:   ninoCtrls[i],
+        onAjustar:  onAjustar,
+        esHoy:      diaHoy == i,
+      );
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Encabezado: título + fechas + buscar ──
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  // Título
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Historial de Tickets',
-                            style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF1A1A1A))),
-                        const SizedBox(height: 4),
-                        Text(
-                            'Consulta y gestiona el registro histórico de ventas.',
-                            style: TextStyle(
-                                fontSize: 13, color: Colors.grey.shade500)),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Lunes – Jueves
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (int i = 0; i < 4; i++) ...[
+                        if (i > 0) const SizedBox(width: 12),
+                        Expanded(child: _diaCard(i)),
                       ],
-                    ),
+                    ],
                   ),
-                  // Fecha DESDE
-                  _FechaChip(
-                    label: 'DESDE',
-                    fecha: fmt.format(_desde),
-                    onTap: () => _seleccionarFecha(true),
+                ),
+                const SizedBox(height: 12),
+                // Viernes – Domingo
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (int j = 0; j < 3; j++) ...[
+                        if (j > 0) const SizedBox(width: 12),
+                        Expanded(child: _diaCard(j + 4)),
+                      ],
+                    ],
                   ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.arrow_forward_rounded,
-                        size: 18, color: Color(0xFF0052CC)),
-                  ),
-                  // Fecha HASTA
-                  _FechaChip(
-                    label: 'HASTA',
-                    fecha: fmt.format(_hasta),
-                    onTap: () => _seleccionarFecha(false),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: _cargarHistorial,
-                    icon: const Icon(Icons.search_rounded, size: 18),
-                    label: const Text('Buscar',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 14)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0052CC),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 14, horizontal: 22),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 2,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
-
-        // ── Tarjetas resumen ──
-        if (_historialTickets.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _SummaryCard(
-                    icono: Icons.confirmation_number_rounded,
-                    label: 'TOTAL TICKETS',
-                    valor: '${ticketsActivos.length}',
-                    color: const Color(0xFF0052CC),
-                    bgColor: const Color(0xFFE3F0FF),
-                  ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+          child: SizedBox(
+            height: 62,
+            child: ElevatedButton.icon(
+              onPressed: onGuardar,
+              icon: const Icon(Icons.save_rounded, size: 26),
+              label: const Text(
+                'GUARDAR PRECIOS',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _SummaryCard(
-                    icono: Icons.people_rounded,
-                    label: 'TOTAL PERSONAS',
-                    valor: '$totalPersonas',
-                    color: const Color(0xFF0052CC),
-                    bgColor: const Color(0xFFE3F0FF),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _SummaryCard(
-                    icono: Icons.payments_rounded,
-                    label: 'INGRESO TOTAL',
-                    valor: 'S/ ${totalIngresos.toStringAsFixed(2)}',
-                    color: const Color(0xFF0052CC),
-                    bgColor: const Color(0xFFE3F0FF),
-                  ),
-                ),
-                if (totalAnulados > 0) ...[
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _SummaryCard(
-                      icono: Icons.cancel_rounded,
-                      label: 'ANULADOS',
-                      valor: '$totalAnulados',
-                      color: Colors.red.shade600,
-                      bgColor: Colors.red.shade50,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-        const SizedBox(height: 8),
-
-        // ── Tabla ──
-        Expanded(
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4))
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Column(
-                children: [
-                  // Cabecera tabla
-                  if (_historialTickets.isNotEmpty)
-                    Container(
-                      color: const Color(0xFFF8FAFD),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 14),
-                      child: const Row(
-                        children: [
-                          Expanded(
-                              flex: 3,
-                              child: _ThLabel(text: 'ID TICKET')),
-                          Expanded(
-                              flex: 3,
-                              child: _ThLabel(text: 'FECHA / HORA')),
-                          Expanded(
-                              flex: 4,
-                              child: _ThLabel(text: 'DETALLE (PAX)')),
-                          Expanded(
-                              flex: 3, child: _ThLabel(text: 'PAGO')),
-                          Expanded(
-                              flex: 3,
-                              child: _ThLabel(
-                                  text: 'MONTO', right: true)),
-                          Expanded(
-                              flex: 2,
-                              child: _ThLabel(
-                                  text: 'ESTADO', right: true)),
-                          Expanded(
-                              flex: 2,
-                              child: _ThLabel(
-                                  text: 'ACCIONES', right: true)),
-                        ],
-                      ),
-                    ),
-                  if (_historialTickets.isNotEmpty)
-                    Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: Colors.grey.shade200),
-                  // Contenido
-                  if (_historialCargando)
-                    const Expanded(
-                        child: Center(
-                            child: CircularProgressIndicator()))
-                  else if (_historialTickets.isEmpty)
-                    Expanded(
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.search_off_rounded,
-                                size: 56,
-                                color: Colors.grey.shade300),
-                            const SizedBox(height: 12),
-                            Text(
-                                'Seleccione un rango de fechas y presione Buscar',
-                                style: TextStyle(
-                                    color: Colors.grey.shade400,
-                                    fontSize: 14)),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: _historialTickets.length,
-                        separatorBuilder: (_, _) => Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: Colors.grey.shade100),
-                        itemBuilder: (context, i) {
-                          final t = _historialTickets[i];
-                          final horaFmt = DateFormat('hh:mm a').format(t.hora);
-                          final fechaFmt =
-                              DateFormat("dd MMM, yyyy", 'es').format(t.hora);
-                          final esEfectivo =
-                              t.metodoPago == 'efectivo';
-                          final iconoPago = esEfectivo
-                              ? Icons.payments_rounded
-                              : Icons.phone_android_rounded;
-
-                          return Container(
-                            color: t.anulado
-                                ? const Color(0xFFFFF5F5)
-                                : (i.isEven
-                                    ? Colors.white
-                                    : const Color(0xFFFAFBFF)),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 14),
-                            child: Row(
-                              children: [
-                                // ID
-                                Expanded(
-                                  flex: 3,
-                                  child: Text(
-                                    '#TK-${t.ticketId}',
-                                    style: TextStyle(
-                                        color: t.anulado
-                                            ? Colors.red.shade300
-                                            : const Color(0xFF0052CC),
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13),
-                                  ),
-                                ),
-                                // Fecha / Hora
-                                Expanded(
-                                  flex: 3,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(fechaFmt,
-                                          style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF1A1A1A))),
-                                      Text(horaFmt,
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              color:
-                                                  Colors.grey.shade500)),
-                                    ],
-                                  ),
-                                ),
-                                // Detalle (PAX) - badges
-                                Expanded(
-                                  flex: 4,
-                                  child: Row(
-                                    children: [
-                                      if (t.adultos > 0)
-                                        Container(
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                const Color(0xFFE3F0FF),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            '${t.adultos} Adulto${t.adultos > 1 ? 's' : ''}',
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight:
-                                                    FontWeight.w700,
-                                                color:
-                                                    Color(0xFF0052CC)),
-                                          ),
-                                        ),
-                                      if (t.adultos > 0 && t.ninos > 0)
-                                        const SizedBox(width: 6),
-                                      if (t.ninos > 0)
-                                        Container(
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                const Color(0xFFE8F5E9),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            '${t.ninos} Niño${t.ninos > 1 ? 's' : ''}',
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight:
-                                                    FontWeight.w700,
-                                                color:
-                                                    Color(0xFF21BA45)),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                // Pago
-                                Expanded(
-                                  flex: 3,
-                                  child: Row(
-                                    children: [
-                                      Icon(iconoPago,
-                                          size: 16,
-                                          color: Colors.grey.shade500),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        t.metodoPago[0].toUpperCase() +
-                                            t.metodoPago.substring(1),
-                                        style: TextStyle(
-                                            fontSize: 13,
-                                            color:
-                                                Colors.grey.shade700),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // Monto
-                                Expanded(
-                                  flex: 3,
-                                  child: Text(
-                                    'S/ ${t.monto.toStringAsFixed(2)}',
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 15,
-                                        color: t.anulado
-                                            ? Colors.grey.shade400
-                                            : const Color(0xFF1A1A1A),
-                                        decoration: t.anulado
-                                            ? TextDecoration.lineThrough
-                                            : null),
-                                  ),
-                                ),
-                                // Estado
-                                Expanded(
-                                  flex: 2,
-                                  child: Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: t.anulado
-                                            ? Colors.red.shade50
-                                            : const Color(0xFFE8F5E9),
-                                        borderRadius:
-                                            BorderRadius.circular(20),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            width: 6,
-                                            height: 6,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: t.anulado
-                                                  ? Colors.red.shade400
-                                                  : const Color(
-                                                      0xFF21BA45),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            t.anulado
-                                                ? 'Anulado'
-                                                : 'Completado',
-                                            style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight:
-                                                    FontWeight.w700,
-                                                color: t.anulado
-                                                    ? Colors.red.shade400
-                                                    : const Color(
-                                                        0xFF21BA45)),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                // Acciones
-                                Expanded(
-                                  flex: 2,
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.end,
-                                    children: [
-                                      if (!t.anulado)
-                                        IconButton(
-                                          onPressed: () =>
-                                              _anularDesdeHistorial(t),
-                                          icon: Icon(
-                                              Icons.cancel_outlined,
-                                              size: 20,
-                                              color:
-                                                  Colors.red.shade300),
-                                          tooltip: 'Anular ticket',
-                                          padding: EdgeInsets.zero,
-                                          constraints:
-                                              const BoxConstraints(),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  // Pie de tabla
-                  if (_historialTickets.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFD),
-                        border: Border(
-                            top: BorderSide(
-                                color: Colors.grey.shade200, width: 1)),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            'Mostrando ${_historialTickets.length} ticket${_historialTickets.length != 1 ? 's' : ''}',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade500),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
               ),
+              style: _saveStyle,
             ),
           ),
         ),
@@ -807,12 +358,630 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
   }
 }
 
-class _FechaChip extends StatelessWidget {
+// =============================================================================
+// Tab Impresora
+// =============================================================================
+class _TabImpresora extends StatelessWidget {
+  final TextEditingController ctrl;
+  final VoidCallback onGuardar;
+
+  const _TabImpresora({required this.ctrl, required this.onGuardar});
+
+  static final _saveStyle = ElevatedButton.styleFrom(
+    backgroundColor: _C.primary,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 4),
+          _ConfigCard(
+            titulo:      'Nombre de la impresora',
+            descripcion: 'Ingresa el nombre exacto del dispositivo',
+            icono:       Icons.print_rounded,
+            child: TextField(
+              controller: ctrl,
+              decoration: const InputDecoration(
+                hintText: 'Ej: POS-80C, EPSON TM-T20',
+                border: OutlineInputBorder(),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: _C.primary, width: 2),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: onGuardar,
+            icon: const Icon(Icons.save_rounded),
+            label: const Text(
+              'GUARDAR IMPRESORA',
+              style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1),
+            ),
+            style: _saveStyle,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Tab Historial
+// =============================================================================
+class _TabHistorial extends StatelessWidget {
+  final DateTime desde;
+  final DateTime hasta;
+  final List<TicketModel> historial;
+  final bool cargando;
+  final VoidCallback onSelDesde;
+  final VoidCallback onSelHasta;
+  final VoidCallback onBuscar;
+  final void Function(TicketModel) onAnular;
+
+  const _TabHistorial({
+    required this.desde,
+    required this.hasta,
+    required this.historial,
+    required this.cargando,
+    required this.onSelDesde,
+    required this.onSelHasta,
+    required this.onBuscar,
+    required this.onAnular,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Cálculos de resumen — solo cuando hay datos
+    final activos       = historial.where((t) => !t.anulado).toList();
+    final totalIngresos = activos.fold<double>(0, (s, t) => s + t.monto);
+    final totalPersonas = activos.fold<int>(0, (s, t) => s + t.adultos + t.ninos);
+    final totalAnulados = historial.where((t) => t.anulado).length;
+    final hayDatos      = historial.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Barra de búsqueda ──
+        _HistorialHeader(
+          desde:     desde,
+          hasta:     hasta,
+          onDesde:   onSelDesde,
+          onHasta:   onSelHasta,
+          onBuscar:  onBuscar,
+        ),
+
+        // ── Tarjetas resumen ──
+        if (hayDatos)
+          _ResumenRow(
+            totalTickets:   activos.length,
+            totalPersonas:  totalPersonas,
+            totalIngresos:  totalIngresos,
+            totalAnulados:  totalAnulados,
+          ),
+
+        const SizedBox(height: 8),
+
+        // ── Tabla ──
+        Expanded(
+          child: _HistorialTabla(
+            historial:  historial,
+            cargando:   cargando,
+            onAnular:   onAnular,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Encabezado de búsqueda ────────────────────────────────────────────────────
+class _HistorialHeader extends StatelessWidget {
+  final DateTime desde, hasta;
+  final VoidCallback onDesde, onHasta, onBuscar;
+
+  const _HistorialHeader({
+    required this.desde,
+    required this.hasta,
+    required this.onDesde,
+    required this.onHasta,
+    required this.onBuscar,
+  });
+
+  static final _buscarStyle = ElevatedButton.styleFrom(
+    backgroundColor: _C.primary,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    elevation: 2,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
+      child: Row(
+        children: [
+          // Título
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Historial de Tickets',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: _C.text,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Consulta y gestiona el registro histórico de ventas.',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
+                ),
+              ],
+            ),
+          ),
+
+          _FechaChip(
+            label: 'DESDE',
+            fecha: _fmtResumen.format(desde),
+            onTap: onDesde,
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Icon(Icons.arrow_forward_rounded, size: 18, color: _C.primary),
+          ),
+          _FechaChip(
+            label: 'HASTA',
+            fecha: _fmtResumen.format(hasta),
+            onTap: onHasta,
+          ),
+          const SizedBox(width: 12),
+
+          ElevatedButton.icon(
+            onPressed: onBuscar,
+            icon: const Icon(Icons.search_rounded, size: 18),
+            label: const Text(
+              'Buscar',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+            style: _buscarStyle,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Fila de tarjetas resumen ──────────────────────────────────────────────────
+class _ResumenRow extends StatelessWidget {
+  final int totalTickets, totalPersonas, totalAnulados;
+  final double totalIngresos;
+
+  const _ResumenRow({
+    required this.totalTickets,
+    required this.totalPersonas,
+    required this.totalIngresos,
+    required this.totalAnulados,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SummaryCard(
+              icono: Icons.confirmation_number_rounded,
+              label: 'TOTAL TICKETS',
+              valor: '$totalTickets',
+              color: _C.primary,
+              bgColor: _C.primaryLight,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: _SummaryCard(
+              icono: Icons.people_rounded,
+              label: 'TOTAL PERSONAS',
+              valor: '$totalPersonas',
+              color: _C.primary,
+              bgColor: _C.primaryLight,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: _SummaryCard(
+              icono: Icons.payments_rounded,
+              label: 'INGRESO TOTAL',
+              valor: 'S/ ${totalIngresos.toStringAsFixed(2)}',
+              color: _C.primary,
+              bgColor: _C.primaryLight,
+            ),
+          ),
+          if (totalAnulados > 0) ...[
+            const SizedBox(width: 14),
+            Expanded(
+              child: _SummaryCard(
+                icono: Icons.cancel_rounded,
+                label: 'ANULADOS',
+                valor: '$totalAnulados',
+                color: Colors.red.shade600,
+                bgColor: Colors.red.shade50,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Tabla con cabecera, contenido y pie ──────────────────────────────────────
+class _HistorialTabla extends StatelessWidget {
+  final List<TicketModel> historial;
+  final bool cargando;
+  final void Function(TicketModel) onAnular;
+
+  const _HistorialTabla({
+    required this.historial,
+    required this.cargando,
+    required this.onAnular,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hayDatos = historial.isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          children: [
+            if (hayDatos) ...[
+              const _TablaHeader(),
+              Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
+            ],
+
+            // Contenido
+            Expanded(
+              child: cargando
+                  ? const Center(child: CircularProgressIndicator())
+                  : !hayDatos
+                      ? const _TablaVacia()
+                      : ListView.separated(
+                          itemCount: historial.length,
+                          separatorBuilder: (_, _) => Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: Colors.grey.shade100,
+                          ),
+                          itemBuilder: (_, i) => _HistorialRow(
+                            ticket:  historial[i],
+                            isEven:  i.isEven,
+                            onAnular: onAnular,
+                          ),
+                        ),
+            ),
+
+            // Pie
+            if (hayDatos)
+              _TablaPie(count: historial.length),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TablaHeader extends StatelessWidget {
+  const _TablaHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _C.headerBg,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: const Row(
+        children: [
+          Expanded(flex: 3, child: _ThLabel(text: 'ID TICKET')),
+          Expanded(flex: 3, child: _ThLabel(text: 'FECHA / HORA')),
+          Expanded(flex: 4, child: _ThLabel(text: 'DETALLE (PAX)')),
+          Expanded(flex: 3, child: _ThLabel(text: 'PAGO')),
+          Expanded(flex: 3, child: _ThLabel(text: 'MONTO', right: true)),
+          Expanded(flex: 2, child: _ThLabel(text: 'ESTADO', right: true)),
+          Expanded(flex: 2, child: _ThLabel(text: 'ACCIONES', right: true)),
+        ],
+      ),
+    );
+  }
+}
+
+class _TablaVacia extends StatelessWidget {
+  const _TablaVacia();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off_rounded, size: 56, color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Text(
+            'Seleccione un rango de fechas y presione Buscar',
+            style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TablaPie extends StatelessWidget {
+  final int count;
+  const _TablaPie({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: _C.headerBg,
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Text(
+        'Mostrando $count ticket${count != 1 ? 's' : ''}',
+        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+      ),
+    );
+  }
+}
+
+// ── Fila individual de historial ──────────────────────────────────────────────
+class _HistorialRow extends StatelessWidget {
+  final TicketModel ticket;
+  final bool isEven;
+  final void Function(TicketModel) onAnular;
+
+  const _HistorialRow({
+    required this.ticket,
+    required this.isEven,
+    required this.onAnular,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t          = ticket;
+    final anulado    = t.anulado;
+    final horaFmt    = _fmtHoraRow.format(t.hora);
+    final fechaFmt   = _fmtFechaRow.format(t.hora);
+    final esEfectivo = t.metodoPago == 'efectivo';
+
+    // Colores derivados del estado — calculados una vez
+    final idColor        = anulado ? Colors.red.shade300 : _C.primary;
+    final montoColor     = anulado ? Colors.grey.shade400 : _C.text;
+    final estadoBgColor  = anulado ? Colors.red.shade50 : _C.greenLight;
+    final estadoColor    = anulado ? Colors.red.shade400 : _C.green;
+    final bgColor        = anulado
+        ? const Color(0xFFFFF5F5)
+        : (isEven ? Colors.white : _C.rowAlt);
+    final montoDecoration = anulado ? TextDecoration.lineThrough : null;
+
+    return Container(
+      color: bgColor,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: Row(
+        children: [
+          // ID
+          Expanded(
+            flex: 3,
+            child: Text(
+              '#TK-${t.ticketId}',
+              style: TextStyle(
+                color: idColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+
+          // Fecha / Hora
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(fechaFmt,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _C.text)),
+                Text(horaFmt,
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade500)),
+              ],
+            ),
+          ),
+
+          // Detalle PAX
+          Expanded(
+            flex: 4,
+            child: Row(
+              children: [
+                if (t.adultos > 0)
+                  _PaxBadge(
+                    label: '${t.adultos} Adulto${t.adultos > 1 ? 's' : ''}',
+                    color: _C.primary,
+                    bgColor: _C.primaryLight,
+                  ),
+                if (t.adultos > 0 && t.ninos > 0) const SizedBox(width: 6),
+                if (t.ninos > 0)
+                  _PaxBadge(
+                    label: '${t.ninos} Niño${t.ninos > 1 ? 's' : ''}',
+                    color: _C.green,
+                    bgColor: _C.greenLight,
+                  ),
+              ],
+            ),
+          ),
+
+          // Pago
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                Icon(
+                  esEfectivo ? Icons.payments_rounded : Icons.phone_android_rounded,
+                  size: 16,
+                  color: Colors.grey.shade500,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${t.metodoPago[0].toUpperCase()}${t.metodoPago.substring(1)}',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                ),
+              ],
+            ),
+          ),
+
+          // Monto
+          Expanded(
+            flex: 3,
+            child: Text(
+              'S/ ${t.monto.toStringAsFixed(2)}',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                color: montoColor,
+                decoration: montoDecoration,
+              ),
+            ),
+          ),
+
+          // Estado
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: estadoBgColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: estadoColor,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      anulado ? 'Anulado' : 'Completado',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: estadoColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Acciones
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: anulado
+                  ? const SizedBox.shrink()
+                  : IconButton(
+                      onPressed: () => onAnular(ticket),
+                      icon: Icon(Icons.cancel_outlined,
+                          size: 20, color: Colors.red.shade300),
+                      tooltip: 'Anular ticket',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Badge de pasajero ─────────────────────────────────────────────────────────
+class _PaxBadge extends StatelessWidget {
   final String label;
-  final String fecha;
+  final Color color, bgColor;
+  const _PaxBadge({
+    required this.label,
+    required this.color,
+    required this.bgColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Widgets reutilizables
+// =============================================================================
+
+class _FechaChip extends StatelessWidget {
+  final String label, fecha;
   final VoidCallback onTap;
-  const _FechaChip(
-      {required this.label, required this.fecha, required this.onTap});
+  const _FechaChip({required this.label, required this.fecha, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -821,15 +990,15 @@ class _FechaChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F7FF),
+          color: _C.background,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFCCE0FF), width: 1.5),
+          border: Border.all(color: _C.borderBlue, width: 1.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.calendar_today_rounded,
-                size: 18, color: Color(0xFF0052CC)),
+                size: 18, color: _C.primary),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -838,14 +1007,14 @@ class _FechaChip extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0052CC),
+                        color: _C.primary,
                         letterSpacing: 0.8)),
                 const SizedBox(height: 3),
                 Text(fecha,
                     style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A1A))),
+                        color: _C.text)),
               ],
             ),
           ],
@@ -857,10 +1026,9 @@ class _FechaChip extends StatelessWidget {
 
 class _SummaryCard extends StatelessWidget {
   final IconData icono;
-  final String label;
-  final String valor;
-  final Color color;
-  final Color bgColor;
+  final String label, valor;
+  final Color color, bgColor;
+
   const _SummaryCard({
     required this.icono,
     required this.label,
@@ -876,7 +1044,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.15), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
@@ -921,24 +1089,27 @@ class _ThLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text,
-        textAlign: right ? TextAlign.right : TextAlign.left,
-        style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: Colors.grey.shade500,
-            letterSpacing: 0.5));
+    return Text(
+      text,
+      textAlign: right ? TextAlign.right : TextAlign.left,
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        color: Colors.grey.shade500,
+        letterSpacing: 0.5,
+      ),
+    );
   }
 }
 
-//  Tarjeta por día 
-
+// =============================================================================
+// _DiaCard
+// =============================================================================
 class _DiaCard extends StatelessWidget {
   final String nombreDia;
   final IconData icono;
   final Color color;
-  final TextEditingController adultoCtrl;
-  final TextEditingController ninoCtrl;
+  final TextEditingController adultoCtrl, ninoCtrl;
   final void Function(TextEditingController, double) onAjustar;
   final bool esHoy;
 
@@ -952,17 +1123,26 @@ class _DiaCard extends StatelessWidget {
     this.esHoy = false,
   });
 
+  static const _labelStyle = TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.8,
+  );
+
   @override
   Widget build(BuildContext context) {
+    final labelColor = Colors.blueGrey.shade500;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: esHoy ? color.withValues(alpha: 0.28) : color.withValues(alpha: 0.10),
-              blurRadius: esHoy ? 18 : 10,
-              offset: const Offset(0, 5))
+            color: color.withValues(alpha: esHoy ? 0.28 : 0.10),
+            blurRadius: esHoy ? 18 : 10,
+            offset: const Offset(0, 5),
+          ),
         ],
         border: Border.all(
           color: esHoy ? color : color.withValues(alpha: 0.18),
@@ -973,7 +1153,7 @@ class _DiaCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          //  Cabecera del día 
+          // Cabecera del día
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -988,15 +1168,17 @@ class _DiaCard extends StatelessWidget {
                   child: Text(
                     nombreDia,
                     style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: esHoy ? Colors.white : color,
-                        fontSize: 14,
-                        letterSpacing: 0.3),
+                      fontWeight: FontWeight.w800,
+                      color: esHoy ? Colors.white : color,
+                      fontSize: 14,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
                 if (esHoy)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(8),
@@ -1012,21 +1194,11 @@ class _DiaCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Text('PRECIO ADULTO',
-              style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.blueGrey.shade500,
-                  letterSpacing: 0.8)),
+          Text('PRECIO ADULTO', style: _labelStyle.copyWith(color: labelColor)),
           const SizedBox(height: 6),
           _FilaPrecio(ctrl: adultoCtrl, color: color, onAjustar: onAjustar),
           const SizedBox(height: 10),
-          Text('PRECIO NIÑO',
-              style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.blueGrey.shade500,
-                  letterSpacing: 0.8)),
+          Text('PRECIO NIÑO', style: _labelStyle.copyWith(color: labelColor)),
           const SizedBox(height: 6),
           _FilaPrecio(ctrl: ninoCtrl, color: color, onAjustar: onAjustar),
         ],
@@ -1035,28 +1207,35 @@ class _DiaCard extends StatelessWidget {
   }
 }
 
-
+// =============================================================================
+// _FilaPrecio
+// =============================================================================
 class _FilaPrecio extends StatelessWidget {
   final TextEditingController ctrl;
   final Color color;
   final void Function(TextEditingController, double) onAjustar;
 
-  const _FilaPrecio(
-      {required this.ctrl, required this.color, required this.onAjustar});
+  const _FilaPrecio({
+    required this.ctrl,
+    required this.color,
+    required this.onAjustar,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         _BtnPrecio(
-            icono: Icons.remove_rounded,
-            color: color,
-            onTap: () => onAjustar(ctrl, -0.5)),
+          icono: Icons.remove_rounded,
+          color: color,
+          onTap: () => onAjustar(ctrl, -0.5),
+        ),
         Expanded(
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 7),
             decoration: BoxDecoration(
-              border: Border.all(color: color.withValues(alpha: 0.35), width: 1.5),
+              border: Border.all(
+                  color: color.withValues(alpha: 0.35), width: 1.5),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -1077,8 +1256,8 @@ class _FilaPrecio extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         fontSize: 18,
                         color: color),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
                     ],
@@ -1095,21 +1274,28 @@ class _FilaPrecio extends StatelessWidget {
           ),
         ),
         _BtnPrecio(
-            icono: Icons.add_rounded,
-            color: color,
-            onTap: () => onAjustar(ctrl, 0.5)),
+          icono: Icons.add_rounded,
+          color: color,
+          onTap: () => onAjustar(ctrl, 0.5),
+        ),
       ],
     );
   }
 }
 
+// =============================================================================
+// _BtnPrecio
+// =============================================================================
 class _BtnPrecio extends StatelessWidget {
   final IconData icono;
   final Color color;
   final VoidCallback onTap;
 
-  const _BtnPrecio(
-      {required this.icono, required this.color, required this.onTap});
+  const _BtnPrecio({
+    required this.icono,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1122,9 +1308,10 @@ class _BtnPrecio extends StatelessWidget {
           borderRadius: BorderRadius.circular(13),
           boxShadow: [
             BoxShadow(
-                color: color.withValues(alpha: 0.35),
-                blurRadius: 7,
-                offset: const Offset(0, 3))
+              color: color.withValues(alpha: 0.35),
+              blurRadius: 7,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
         child: Icon(icono, color: Colors.white, size: 22),
@@ -1133,6 +1320,9 @@ class _BtnPrecio extends StatelessWidget {
   }
 }
 
+// =============================================================================
+// _ConfigCard
+// =============================================================================
 class _ConfigCard extends StatelessWidget {
   final String titulo, descripcion;
   final IconData icono;
@@ -1151,24 +1341,27 @@ class _ConfigCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 3))
+            color: Color(0x0F000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
         ],
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(icono, color: const Color(0xFF0052CC), size: 22),
-            const SizedBox(width: 10),
-            Text(titulo,
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w700)),
-          ]),
+          Row(
+            children: [
+              Icon(icono, color: _C.primary, size: 22),
+              const SizedBox(width: 10),
+              Text(titulo,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w700)),
+            ],
+          ),
           const SizedBox(height: 4),
           Text(descripcion,
               style:
@@ -1180,4 +1373,3 @@ class _ConfigCard extends StatelessWidget {
     );
   }
 }
-

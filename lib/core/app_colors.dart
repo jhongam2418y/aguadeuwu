@@ -32,8 +32,8 @@ class AppColors {
   static Color blackOpacity05 = Colors.black.withValues(alpha:0.05);
 
   // Otros colores si son muy específicos y se repiten
-  static Color blueOpacity10 = const Color(0xFF0052CC).withValues(alpha: 0.1);
-  static Color blueOpacity09 = const Color(0xFF0052CC).withValues(alpha: 0.09);
-  static Color blueOpacity35 = const Color(0xFF0052CC).withValues(alpha: 0.35);
-  static Color blueOpacity28 = const Color(0xFF0052CC).withValues(alpha: 0.28);
+  static final Color blueOpacity10 = const Color(0xFF0052CC).withValues(alpha: 0.1);
+  static final Color blueOpacity09 = const Color(0xFF0052CC).withValues(alpha: 0.09);
+  static final Color blueOpacity35 = const Color(0xFF0052CC).withValues(alpha: 0.35);
+  static final Color blueOpacity28 = const Color(0xFF0052CC).withValues(alpha: 0.28);
 }

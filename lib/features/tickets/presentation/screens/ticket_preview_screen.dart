@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
+
 import '../../../configuracion/presentation/providers/config_provider.dart';
 import '../providers/ticket_provider.dart';
+
+// ─── Constantes de diseño ────────────────────────────────────────────────────
+abstract final class _C {
+  static const primary      = Color(0xFF0052CC);
+  static const primaryDark  = Color(0xFF003D99);
+  static const blueBorder   = Color(0xFF90CAF9);
+  static const text         = Color(0xFF1A1A1A);
+  static const background   = Color(0xFFF0F7FF);
+  static const panelBg      = Color(0xFFDDE6F0);
+}
+
+// Formateadores — instanciados una sola vez
+final _fmtFecha = DateFormat('dd/MM/yyyy');
+final _fmtHora  = DateFormat('HH:mm');
 
 // =============================================================================
 // TicketPreviewScreen
 // =============================================================================
 class TicketPreviewScreen extends StatefulWidget {
-  final int adultos, ninos;
-  final double precioAdulto, precioNino, total;
+  final int adultos;
+  final int ninos;
+  final double precioAdulto;
+  final double precioNino;
+  final double total;
   final String metodoPago;
   final VoidCallback onSalir;
   final Future<int?> Function() onGuardar;
@@ -33,64 +52,61 @@ class TicketPreviewScreen extends StatefulWidget {
 }
 
 class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
-  bool _guardado = false;
+  bool _guardado   = false;
   int? _ticketDbId;
-  bool _isLoading = false;
+  bool _isLoading  = false;
 
-  int get adultos => widget.adultos;
-  int get ninos => widget.ninos;
-  double get precioAdulto => widget.precioAdulto;
-  double get precioNino => widget.precioNino;
-  double get total => widget.total;
-  String get metodoPago => widget.metodoPago;
+  // Snapshot de fecha/hora al momento de abrir la pantalla — no cambia
+  late final DateTime _ahora = DateTime.now();
+  late final String _fecha   = _fmtFecha.format(_ahora);
+  late final String _hora    = _fmtHora.format(_ahora);
 
-  String get _fecha {
-    final n = DateTime.now();
-    return '${n.day.toString().padLeft(2, '0')}/'
-        '${n.month.toString().padLeft(2, '0')}/${n.year}';
+  // Accesos cortos a widget (evita widget.x repetido)
+  int    get _adultos      => widget.adultos;
+  int    get _ninos        => widget.ninos;
+  double get _precioAdulto => widget.precioAdulto;
+  double get _precioNino   => widget.precioNino;
+  double get _total        => widget.total;
+  String get _metodoPago   => widget.metodoPago;
+
+  // ── Helpers de UI ──────────────────────────────────────────────────────────
+
+  void _setLoading(bool v) => setState(() => _isLoading = v);
+
+  void _showSnack(String msg, {Color bg = Colors.green}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: bg),
+    );
   }
 
-  String get _hora {
-    final n = DateTime.now();
-    return '${n.hour.toString().padLeft(2, '0')}:'
-        '${n.minute.toString().padLeft(2, '0')}';
-  }
+  // ── PDF ────────────────────────────────────────────────────────────────────
 
-  // ---------------------------------------------------------------------------
-  // PDF
-  // ---------------------------------------------------------------------------
   Future<pw.Document> _buildPdf() async {
-    final pdf = pw.Document();
-    const mmPt = PdfPageFormat.mm;
+    final pdf   = pw.Document();
+    const mmPt  = PdfPageFormat.mm;
+    final pago  = '${_metodoPago[0].toUpperCase()}${_metodoPago.substring(1)}';
 
-    pw.Widget pdfRow(
-      String label,
-      String value, {
-      bool bold = false,
-      double fontSize = 11,
-    }) {
+    // Helper interno al método — no necesita ser un getter del estado
+    pw.Widget pdfRow(String label, String value,
+        {bool bold = false, double fontSize = 11}) {
       final style = bold
           ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
           : pw.TextStyle(fontSize: fontSize);
       return pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(label, style: style),
-          pw.Text(value, style: style),
-        ],
+        children: [pw.Text(label, style: style), pw.Text(value, style: style)],
       );
     }
 
     pdf.addPage(
       pw.Page(
-        pageFormat:
-            PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
-        build: (pw.Context ctx) => pw.Column(
+        pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
+        build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
             pw.Text('PISCIGRANJA',
-                style: pw.TextStyle(
-                    fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 2),
             pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
             pw.SizedBox(height: 8),
@@ -104,28 +120,26 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pw.SizedBox(height: 4),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
-            if (adultos > 0) ...[
-              pdfRow('Adultos (x$adultos)',
-                  'S/ ${(adultos * precioAdulto).toStringAsFixed(2)}'),
+            if (_adultos > 0) ...[
+              pdfRow('Adultos (x$_adultos)',
+                  'S/ ${(_adultos * _precioAdulto).toStringAsFixed(2)}'),
               pw.SizedBox(height: 3),
             ],
-            if (ninos > 0) ...[
-              pdfRow('Ninos  (x$ninos)',
-                  'S/ ${(ninos * precioNino).toStringAsFixed(2)}'),
+            if (_ninos > 0) ...[
+              pdfRow('Ninos  (x$_ninos)',
+                  'S/ ${(_ninos * _precioNino).toStringAsFixed(2)}'),
               pw.SizedBox(height: 3),
             ],
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
-            pdfRow('Subtotal:', 'S/ ${total.toStringAsFixed(2)}'),
+            pdfRow('Subtotal:', 'S/ ${_total.toStringAsFixed(2)}'),
             pw.SizedBox(height: 4),
             pw.Divider(thickness: 1.5),
             pw.SizedBox(height: 4),
-            pdfRow('TOTAL:', 'S/ ${total.toStringAsFixed(2)}',
+            pdfRow('TOTAL:', 'S/ ${_total.toStringAsFixed(2)}',
                 bold: true, fontSize: 16),
             pw.SizedBox(height: 4),
-            pw.Text(
-                'Pago: ${metodoPago[0].toUpperCase()}${metodoPago.substring(1)}',
-                style: const pw.TextStyle(fontSize: 10)),
+            pw.Text('Pago: $pago', style: const pw.TextStyle(fontSize: 10)),
             pw.SizedBox(height: 8),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 6),
@@ -138,56 +152,41 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
     return pdf;
   }
 
-  // ---------------------------------------------------------------------------
-  // Acciones
-  // ---------------------------------------------------------------------------
-  Future<void> _imprimir(BuildContext context) async {
-    setState(() => _isLoading = true);
-    final messenger = ScaffoldMessenger.of(context);
+  // ── Acciones ───────────────────────────────────────────────────────────────
+
+  Future<void> _imprimir() async {
+    _setLoading(true);
     try {
       if (!_guardado) {
         _ticketDbId = await widget.onGuardar();
-        if (_ticketDbId == null) {
-          throw Exception('No se pudo guardar el ticket para imprimir.');
-        }
+        if (_ticketDbId == null) throw Exception('No se pudo guardar el ticket.');
         setState(() => _guardado = true);
       }
       final pdf = await _buildPdf();
       await Printing.layoutPdf(onLayout: (_) async => pdf.save());
-      if (!mounted) return;
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Ticket impreso correctamente'),
-        backgroundColor: Colors.green,
-      ));
+      _showSnack('Ticket impreso correctamente');
     } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(
-        content: Text('Error al imprimir: $e'),
-        backgroundColor: Colors.red,
-      ));
+      _showSnack('Error al imprimir: $e', bg: Colors.red);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      _setLoading(false);
     }
   }
 
-  Future<void> _confirmarAnulacion(BuildContext context) async {
+  Future<void> _confirmarAnulacion() async {
+    // Aún no guardado → simplemente cancelar
     if (!_guardado) {
       widget.onSalir();
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
       return;
     }
-
-    final provider = context.read<TicketProvider>();
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
 
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Anular Ticket'),
         content: const Text(
-          'Este ticket ya fue guardado. Desea anularlo? '
-          'Esta accion no se puede deshacer.',
+          'Este ticket ya fue guardado. ¿Desea anularlo?\n'
+          'Esta acción no se puede deshacer.',
         ),
         actions: [
           TextButton(
@@ -196,88 +195,58 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Anular'),
           ),
         ],
       ),
     );
 
-    if (!mounted) return;
+    if (!mounted || confirmar != true || _ticketDbId == null) return;
 
-    if (confirmar == true && _ticketDbId != null) {
-      setState(() => _isLoading = true);
-      try {
-        await provider.anularTicket(_ticketDbId!);
-        if (!mounted) return;
-        messenger.showSnackBar(const SnackBar(
-          content: Text('Ticket anulado correctamente'),
-          backgroundColor: Colors.red,
-        ));
-        widget.onSalir();
-        navigator.popUntil((r) => r.isFirst);
-      } catch (e) {
-        if (!mounted) return;
-        messenger.showSnackBar(SnackBar(
-          content: Text('Error al anular: $e'),
-          backgroundColor: Colors.red,
-        ));
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
-      }
+    _setLoading(true);
+    try {
+      await context.read<TicketProvider>().anularTicket(_ticketDbId!);
+      _showSnack('Ticket anulado correctamente', bg: Colors.red);
+      if (!mounted) return;
+      widget.onSalir();
+      Navigator.of(context).popUntil((r) => r.isFirst);
+    } catch (e) {
+      _showSnack('Error al anular: $e', bg: Colors.red);
+    } finally {
+      _setLoading(false);
     }
   }
 
-  // -------------------------------
-  // Build
-  // ----------------------------
+  // ── Build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final cfg = context.watch<ConfigProvider>();
-    final impresora =
-        cfg.nombreImpresora.isEmpty ? 'No configurada' : cfg.nombreImpresora;
-    final conectado = cfg.nombreImpresora.isNotEmpty;
+    final nombreImpresora = context.select<ConfigProvider, String>(
+      (c) => c.nombreImpresora,
+    );
+    final conectado = nombreImpresora.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F7FF),
+      backgroundColor: _C.background,
       body: SafeArea(
         child: Stack(
           children: [
             Column(
               children: [
-                // ── Header ──────────────────────────────────────────────────
-                Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                        colors: [Color(0xFF0052CC), Color(0xFF003D99)]),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
-                  child: const Column(
-                    children: [
-                      Text('PISCIGRANJA',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 2)),
-                      SizedBox(height: 2),
-                      Text('Vista Previa del Ticket',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 12)),
-                    ],
-                  ),
-                ),
-
-                // ── Body ────────────────────────────────────────────────────
+                const _PreviewHeader(),
                 Expanded(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Panel izquierdo — ticket
+                      // ── Panel izquierdo: vista del ticket ─────────────────
                       Expanded(
                         flex: 60,
-                        child: Container(
-                          color: const Color(0xFFDDE6F0),
+                        child: ColoredBox(
+                          color: _C.panelBg,
                           child: Center(
                             child: SingleChildScrollView(
                               padding: const EdgeInsets.symmetric(
@@ -285,13 +254,13 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                               child: SizedBox(
                                 width: 340,
                                 child: _TicketCard(
-                                  adultos: adultos,
-                                  ninos: ninos,
-                                  precioAdulto: precioAdulto,
-                                  precioNino: precioNino,
-                                  total: total,
-                                  fecha: _fecha,
-                                  hora: _hora,
+                                  adultos:      _adultos,
+                                  ninos:        _ninos,
+                                  precioAdulto: _precioAdulto,
+                                  precioNino:   _precioNino,
+                                  total:        _total,
+                                  fecha:        _fecha,
+                                  hora:         _hora,
                                 ),
                               ),
                             ),
@@ -299,133 +268,22 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                         ),
                       ),
 
-                      // Panel derecho — acciones
+                      // ── Panel derecho: acciones ───────────────────────────
                       Expanded(
                         flex: 40,
                         child: Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(20, 24, 28, 24),
+                          padding: const EdgeInsets.fromLTRB(20, 24, 28, 24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // Card acciones
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.07),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 4))
-                                  ],
-                                ),
-                                padding: const EdgeInsets.all(22),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    // Título
-                                    Row(children: const [
-                                      Icon(Icons.print_rounded,
-                                          color: Color(0xFF0052CC),
-                                          size: 22),
-                                      SizedBox(width: 8),
-                                      Text('Acciones del Ticket',
-                                          style: TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.w800,
-                                              color: Color(0xFF1A1A1A))),
-                                    ]),
-                                    const SizedBox(height: 24),
-
-                                    // Imprimir Ticket
-                                    ElevatedButton.icon(
-                                      onPressed: _isLoading
-                                          ? null
-                                          : () => _imprimir(context),
-                                      icon: const Icon(Icons.print_rounded,
-                                          size: 26),
-                                      label: const Text('Imprimir Ticket',
-                                          style: TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w800)),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF0052CC),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 30),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12)),
-                                        elevation: 3,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24),
-
-                                    // Editar Datos
-                                    OutlinedButton.icon(
-                                      onPressed: _isLoading
-                                          ? null
-                                          : () => Navigator.pop(context),
-                                      icon: const Icon(Icons.edit_rounded,
-                                          size: 24),
-                                      label: const Text('Editar Datos',
-                                          style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w700)),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor:
-                                            const Color(0xFF0052CC),
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 26),
-                                        side: const BorderSide(
-                                            color: Color(0xFF90CAF9),
-                                            width: 1.5),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12)),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-
-                                    // Anular / Cancelar
-                                    OutlinedButton.icon(
-                                      onPressed: _isLoading
-                                          ? null
-                                          : () =>
-                                              _confirmarAnulacion(context),
-                                      icon: Icon(Icons.close_rounded,
-                                          color: Colors.red.shade600,
-                                          size: 24),
-                                      label: Text(
-                                          _guardado
-                                              ? 'Anular Ticket'
-                                              : 'Cancelar',
-                                          style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w700)),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor:
-                                            Colors.red.shade600,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 26),
-                                        side: BorderSide(
-                                            color: Colors.red.shade200,
-                                            width: 1.5),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12)),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              _ActionsCard(
+                                isLoading:  _isLoading,
+                                guardado:   _guardado,
+                                onImprimir: _imprimir,
+                                onEditar:   () => Navigator.pop(context),
+                                onAnular:   _confirmarAnulacion,
                               ),
                               const SizedBox(height: 14),
-
-                              // Volver al Panel Principal
                               _DashedButton(
                                 onTap: _isLoading
                                     ? () {}
@@ -435,74 +293,12 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                                             .popUntil((r) => r.isFirst);
                                       },
                               ),
-
                               const Spacer(),
-
-                              // Impresora info
-                              Container(
-                                padding: const EdgeInsets.all(18),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.05),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 2))
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: conectado
-                                            ? const Color(0xFFE8F5E9)
-                                            : const Color(0xFFFFF8E1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        conectado
-                                            ? Icons.check_circle_rounded
-                                            : Icons.warning_amber_rounded,
-                                        color: conectado
-                                            ? Colors.green.shade600
-                                            : Colors.orange,
-                                        size: 26,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text('IMPRESORA',
-                                            style: TextStyle(
-                                                fontSize: 10,
-                                                color: Colors.grey,
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: 1.2)),
-                                        const SizedBox(height: 4),
-                                        Text(impresora,
-                                            style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFF1A1A1A))),
-                                        Text(
-                                          conectado
-                                              ? 'Conectado y listo'
-                                              : 'No configurada',
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color: conectado
-                                                  ? Colors.green.shade600
-                                                  : Colors.orange),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                              _PrinterInfo(
+                                nombre:    nombreImpresora.isEmpty
+                                    ? 'No configurada'
+                                    : nombreImpresora,
+                                conectado: conectado,
                               ),
                             ],
                           ),
@@ -516,14 +312,243 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
 
             // Overlay de carga
             if (_isLoading)
-              Container(
-                color: Colors.black.withValues(alpha: 0.45),
-                child: const Center(
+              const ColoredBox(
+                color: Color(0x73000000), // ~45% opacidad
+                child: Center(
                   child: CircularProgressIndicator(color: Colors.white),
                 ),
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _PreviewHeader  (const)
+// =============================================================================
+class _PreviewHeader extends StatelessWidget {
+  const _PreviewHeader();
+
+  // Decoración estática — se crea una sola vez
+  static const _gradient = BoxDecoration(
+    gradient: LinearGradient(colors: [_C.primary, _C.primaryDark]),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: _gradient,
+      padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+      child: const Column(
+        children: [
+          Text(
+            'PISCIGRANJA',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2,
+            ),
+          ),
+          SizedBox(height: 2),
+          Text(
+            'Vista Previa del Ticket',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _ActionsCard  — tarjeta con los tres botones de acción
+// =============================================================================
+class _ActionsCard extends StatelessWidget {
+  final bool isLoading;
+  final bool guardado;
+  final VoidCallback onImprimir;
+  final VoidCallback onEditar;
+  final VoidCallback onAnular;
+
+  const _ActionsCard({
+    required this.isLoading,
+    required this.guardado,
+    required this.onImprimir,
+    required this.onEditar,
+    required this.onAnular,
+  });
+
+  // Estilos estáticos — se construyen una vez
+  static final _printStyle = ElevatedButton.styleFrom(
+    backgroundColor: _C.primary,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(vertical: 30),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    elevation: 3,
+  );
+
+  static final _editStyle = OutlinedButton.styleFrom(
+    foregroundColor: _C.primary,
+    padding: const EdgeInsets.symmetric(vertical: 26),
+    side: const BorderSide(color: _C.blueBorder, width: 1.5),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final cancelStyle = OutlinedButton.styleFrom(
+      foregroundColor: Colors.red.shade600,
+      padding: const EdgeInsets.symmetric(vertical: 26),
+      side: BorderSide(color: Colors.red.shade200, width: 1.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Título
+          const Row(
+            children: [
+              Icon(Icons.print_rounded, color: _C.primary, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Acciones del Ticket',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: _C.text,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Imprimir
+          ElevatedButton.icon(
+            onPressed: isLoading ? null : onImprimir,
+            icon: const Icon(Icons.print_rounded, size: 26),
+            label: const Text(
+              'Imprimir Ticket',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
+            style: _printStyle,
+          ),
+          const SizedBox(height: 24),
+
+          // Editar
+          OutlinedButton.icon(
+            onPressed: isLoading ? null : onEditar,
+            icon: const Icon(Icons.edit_rounded, size: 24),
+            label: const Text(
+              'Editar Datos',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            style: _editStyle,
+          ),
+          const SizedBox(height: 16),
+
+          // Anular / Cancelar
+          OutlinedButton.icon(
+            onPressed: isLoading ? null : onAnular,
+            icon: Icon(Icons.close_rounded, color: Colors.red.shade600, size: 24),
+            label: Text(
+              guardado ? 'Anular Ticket' : 'Cancelar',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            style: cancelStyle,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _PrinterInfo  — widget separado para info de impresora
+// =============================================================================
+class _PrinterInfo extends StatelessWidget {
+  final String nombre;
+  final bool conectado;
+  const _PrinterInfo({required this.nombre, required this.conectado});
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor  = conectado ? Colors.green.shade600 : Colors.orange;
+    final iconBgColor = conectado
+        ? const Color(0xFFE8F5E9)
+        : const Color(0xFFFFF8E1);
+    final statusText = conectado ? 'Conectado y listo' : 'No configurada';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: iconBgColor, shape: BoxShape.circle),
+            child: Icon(
+              conectado ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
+              color: iconColor,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'IMPRESORA',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                nombre,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: _C.text,
+                ),
+              ),
+              Text(
+                statusText,
+                style: TextStyle(fontSize: 12, color: iconColor),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -547,54 +572,60 @@ class _TicketCard extends StatelessWidget {
     required this.hora,
   });
 
+  // Sombra estática
+  static const _shadow = BoxShadow(
+    color: Color(0x2E000000),
+    blurRadius: 24,
+    offset: Offset(0, 8),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(4)),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8))
-            ],
+            borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+            boxShadow: [_shadow],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Franja azul
-              Container(
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0052CC),
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(4)),
+              // Franja superior azul
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _C.primary,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
                 ),
+                child: SizedBox(height: 6),
               ),
+
               // Encabezado
               const Padding(
                 padding: EdgeInsets.fromLTRB(20, 18, 20, 12),
                 child: Column(
                   children: [
-                    Text('PISCIGRANJA',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 18,
-                            letterSpacing: 2.5)),
+                    Text(
+                      'PISCIGRANJA',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        letterSpacing: 2.5,
+                      ),
+                    ),
                     SizedBox(height: 2),
-                    Text('Boleteria de Ingreso',
-                        textAlign: TextAlign.center,
-                        style:
-                            TextStyle(fontSize: 11, color: Colors.grey)),
+                    Text(
+                      'Boleteria de Ingreso',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
                   ],
                 ),
               ),
               const _TicketDivider(),
+
               // Fecha / Hora / Tipo
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
@@ -604,13 +635,13 @@ class _TicketCard extends StatelessWidget {
                     const SizedBox(height: 7),
                     _TicketRow(label: 'HORA:', value: hora),
                     const SizedBox(height: 7),
-                    const _TicketRow(
-                        label: 'TIPO:', value: 'ENTRADA GENERAL'),
+                    const _TicketRow(label: 'TIPO:', value: 'ENTRADA GENERAL'),
                   ],
                 ),
               ),
               const _TicketDivider(),
-              // Items
+
+              // Ítems
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                 child: Column(
@@ -618,48 +649,54 @@ class _TicketCard extends StatelessWidget {
                     if (adultos > 0)
                       _TicketRow(
                         label: 'Adultos (x$adultos)',
-                        value:
-                            'S/ ${(adultos * precioAdulto).toStringAsFixed(2)}',
+                        value: 'S/ ${(adultos * precioAdulto).toStringAsFixed(2)}',
                       ),
-                    if (adultos > 0 && ninos > 0)
-                      const SizedBox(height: 7),
+                    if (adultos > 0 && ninos > 0) const SizedBox(height: 7),
                     if (ninos > 0)
                       _TicketRow(
                         label: 'Ninos (x$ninos)',
-                        value:
-                            'S/ ${(ninos * precioNino).toStringAsFixed(2)}',
+                        value: 'S/ ${(ninos * precioNino).toStringAsFixed(2)}',
                       ),
                   ],
                 ),
               ),
               const _TicketDivider(thick: true),
+
               // Total
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('TOTAL ESTIMADO:',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w900, fontSize: 14)),
-                    Text('S/ ${total.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w900, fontSize: 18)),
+                    const Text(
+                      'TOTAL ESTIMADO:',
+                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+                    ),
+                    Text(
+                      'S/ ${total.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900, fontSize: 18),
+                    ),
                   ],
                 ),
               ),
               const _TicketDivider(),
+
               // Gracias
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                child: Text('GRACIAS POR SU VISITA!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                        letterSpacing: 0.5)),
+                child: Text(
+                  'GRACIAS POR SU VISITA!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-              // Codigo de barras
+
+              // Código de barras
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Center(
@@ -674,37 +711,50 @@ class _TicketCard extends StatelessWidget {
         ),
 
         // Borde dentado inferior
-        ClipRect(
-          child: SizedBox(
-            height: 14,
-            child: Row(
-              children: List.generate(
-                31,
-                (i) => Expanded(
-                  child: Container(
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: i.isEven
-                          ? Colors.white
-                          : const Color(0xFFDDE6F0),
-                      borderRadius: i.isEven
-                          ? const BorderRadius.vertical(
-                              bottom: Radius.circular(7))
-                          : null,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        _TicketTear(bgColor: _C.panelBg),
       ],
     );
   }
 }
 
 // =============================================================================
-// Widgets auxiliares
+// _TicketTear  — borde dentado extraído como widget
+// =============================================================================
+class _TicketTear extends StatelessWidget {
+  final Color bgColor;
+  const _TicketTear({required this.bgColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: SizedBox(
+        height: 14,
+        child: Row(
+          children: List.generate(
+            31,
+            (i) => Expanded(
+              child: SizedBox(
+                height: 14,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: i.isEven ? Colors.white : bgColor,
+                    borderRadius: i.isEven
+                        ? const BorderRadius.vertical(
+                            bottom: Radius.circular(7))
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Widgets auxiliares del ticket
 // =============================================================================
 class _TicketDivider extends StatelessWidget {
   final bool thick;
@@ -713,10 +763,11 @@ class _TicketDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Divider(
-        thickness: thick ? 1.5 : 0.8,
-        indent: 16,
-        endIndent: 16,
-        color: Colors.grey.shade300);
+      thickness: thick ? 1.5 : 0.8,
+      indent: 16,
+      endIndent: 16,
+      color: Colors.grey.shade300,
+    );
   }
 }
 
@@ -726,45 +777,47 @@ class _TicketRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const size = 13.0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
-            style: const TextStyle(
-                fontSize: size, fontWeight: FontWeight.w500)),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         Text(value,
-            style: const TextStyle(
-                fontSize: size, fontWeight: FontWeight.w700)),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
       ],
     );
   }
 }
 
+// =============================================================================
+// _BarcodePainter  — lista de anchos como const
+// =============================================================================
 class _BarcodePainter extends CustomPainter {
+  static const _bars = [
+    3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2, 1, 2, 4,
+    1, 3, 2, 1, 3, 2, 4, 1, 2, 3, 1, 2, 1, 3, 2, 1,
+  ];
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = Colors.grey.shade700;
-    final rng = [
-      3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2, 1, 2, 4,
-      1, 3, 2, 1, 3, 2, 4, 1, 2, 3, 1, 2, 1, 3, 2, 1,
-    ];
     double x = 0;
     bool draw = true;
-    for (final w in rng) {
+    for (final w in _bars) {
       final barW = w * (size.width / 56);
-      if (draw) {
-        canvas.drawRect(Rect.fromLTWH(x, 0, barW, size.height), paint);
-      }
+      if (draw) canvas.drawRect(Rect.fromLTWH(x, 0, barW, size.height), paint);
       x += barW;
       draw = !draw;
     }
   }
 
   @override
-  bool shouldRepaint(_BarcodePainter old) => false;
+  bool shouldRepaint(_BarcodePainter _) => false;
 }
 
+// =============================================================================
+// _DashedButton
+// =============================================================================
 class _DashedButton extends StatelessWidget {
   final VoidCallback onTap;
   const _DashedButton({required this.onTap});
@@ -774,20 +827,22 @@ class _DashedButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: CustomPaint(
-        painter: _DashedBorderPainter(),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 28),
+        painter: const _DashedBorderPainter(),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 28),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.arrow_back_rounded,
-                  size: 20, color: Color(0xFF0052CC)),
+            children: [
+              Icon(Icons.arrow_back_rounded, size: 20, color: _C.primary),
               SizedBox(width: 8),
-              Text('Volver al Panel Principal',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0052CC))),
+              Text(
+                'Volver al Panel Principal',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: _C.primary,
+                ),
+              ),
             ],
           ),
         ),
@@ -796,32 +851,39 @@ class _DashedButton extends StatelessWidget {
   }
 }
 
+// =============================================================================
+// _DashedBorderPainter  (const constructor)
+// =============================================================================
 class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter();
+
+  static const _dashW = 6.0;
+  static const _gapW  = 4.0;
+  static final _paint = Paint()
+    ..color      = _C.blueBorder
+    ..strokeWidth = 1.5
+    ..style      = PaintingStyle.stroke;
+
   @override
   void paint(Canvas canvas, Size size) {
-    const dashW = 6.0;
-    const gapW = 4.0;
-    final paint = Paint()
-      ..color = const Color(0xFF90CAF9)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    final rrect = RRect.fromRectAndRadius(
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
         Rect.fromLTWH(0, 0, size.width, size.height),
-        const Radius.circular(10));
-    final path = Path()..addRRect(rrect);
+        const Radius.circular(10),
+      ));
     for (final metric in path.computeMetrics()) {
-      double dist = 0;
-      bool drawing = true;
+      double dist   = 0;
+      bool drawing  = true;
       while (dist < metric.length) {
-        final len = drawing ? dashW : gapW;
+        final len = drawing ? _dashW : _gapW;
         final end = (dist + len).clamp(0.0, metric.length);
-        if (drawing) canvas.drawPath(metric.extractPath(dist, end), paint);
-        dist += len;
-        drawing = !drawing;
+        if (drawing) canvas.drawPath(metric.extractPath(dist, end), _paint);
+        dist    += len;
+        drawing  = !drawing;
       }
     }
   }
 
   @override
-  bool shouldRepaint(_DashedBorderPainter old) => false;
+  bool shouldRepaint(_DashedBorderPainter _) => false;
 }
