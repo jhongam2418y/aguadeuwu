@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:piscigranja/core/export/export_service.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/config_provider.dart';
@@ -458,6 +459,7 @@ class _TabHistorial extends StatelessWidget {
           onDesde:   onSelDesde,
           onHasta:   onSelHasta,
           onBuscar:  onBuscar,
+           historial: [],
         ),
 
         // ── Tarjetas resumen ──
@@ -487,11 +489,13 @@ class _TabHistorial extends StatelessWidget {
 // ── Encabezado de búsqueda ────────────────────────────────────────────────────
 class _HistorialHeader extends StatelessWidget {
   final DateTime desde, hasta;
+  final List<TicketModel> historial;          // ← nuevo
   final VoidCallback onDesde, onHasta, onBuscar;
 
   const _HistorialHeader({
     required this.desde,
     required this.hasta,
+    required this.historial,                  // ← nuevo
     required this.onDesde,
     required this.onHasta,
     required this.onBuscar,
@@ -550,15 +554,47 @@ class _HistorialHeader extends StatelessWidget {
           ),
           const SizedBox(width: 12),
 
-          ElevatedButton.icon(
-            onPressed: onBuscar,
-            icon: const Icon(Icons.search_rounded, size: 18),
-            label: const Text(
-              'Buscar',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          Row(
+          children: [
+            ElevatedButton.icon(
+              onPressed: onBuscar,
+              icon: const Icon(Icons.search_rounded, size: 18),
+              label: const Text(
+                'Buscar',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              ),
+              style: _buscarStyle,
             ),
-            style: _buscarStyle,
-          ),
+
+            const SizedBox(width: 10),
+
+            if (historial.isNotEmpty) ...[   // ← sin guión bajo
+              _ExportButton(
+                icon: Icons.table_chart_rounded,
+                label: 'CSV',
+                color: const Color(0xFF21BA45),
+                onTap: () => ExportService.instance.exportarCSV(
+                  tickets: historial,        // ← sin guión bajo
+                  desde: desde,              // ← sin guión bajo
+                  hasta: hasta,              // ← sin guión bajo
+                  context: context,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _ExportButton(
+                icon: Icons.picture_as_pdf_rounded,
+                label: 'PDF',
+                color: Colors.red,
+                onTap: () => ExportService.instance.exportarPDF(
+                  tickets: historial,        // ← sin guión bajo
+                  desde: desde,              // ← sin guión bajo
+                  hasta: hasta,              // ← sin guión bajo
+                  context: context,
+                ),
+              ),
+            ],
+          ],
+        ),
         ],
       ),
     );
@@ -1371,6 +1407,32 @@ class _ConfigCard extends StatelessWidget {
           const SizedBox(height: 14),
           child,
         ],
+      ),
+    );
+  }
+}
+class _ExportButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _ExportButton(
+      {required this.icon, required this.label,
+       required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(label,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 2,
       ),
     );
   }

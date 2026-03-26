@@ -32,7 +32,13 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-
+  # CSV — nativo Dart, sin FFI
+  csv: ^6.0.0
+  # Selector de carpeta para guardar archivos
+  file_picker: ^8.1.2
+  # Para abrir archivos tras exportar (opcional pero útil)
+  open_filex: ^4.4.0
+  
   cupertino_icons: ^1.0.8
   pdf: ^3.10.8
   printing: ^5.11.0
