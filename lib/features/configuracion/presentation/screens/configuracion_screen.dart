@@ -482,7 +482,7 @@ class _HistorialHeader extends StatelessWidget {
   static final _buscarStyle = ElevatedButton.styleFrom(
     backgroundColor: _C.primary,
     foregroundColor: Colors.white,
-    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
+    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 26),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     elevation: 2,
   );
@@ -494,12 +494,12 @@ class _HistorialHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
       child: Row(
         children: [
-          // Título
-          const Expanded(
+          // Título (izquierda)
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Historial de Tickets',
                   style: TextStyle(
                     fontSize: 22,
@@ -507,7 +507,7 @@ class _HistorialHeader extends StatelessWidget {
                     color: _C.text,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Consulta y gestiona el registro histórico de ventas.',
                   style: TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
@@ -516,62 +516,67 @@ class _HistorialHeader extends StatelessWidget {
             ),
           ),
 
-          _FechaChip(
-            label: 'DESDE',
-            fecha: _fmtResumen.format(desde),
-            onTap: onDesde,
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: Icon(Icons.arrow_forward_rounded, size: 18, color: _C.primary),
-          ),
-          _FechaChip(
-            label: 'HASTA',
-            fecha: _fmtResumen.format(hasta),
-            onTap: onHasta,
-          ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
 
-          // Botones de acción
+          // Botones de exportación (CSV, PDF, Buscar) - izquierda de las fechas
+          if (historial.isNotEmpty) ...[
+            _ExportButton(
+              icon:  Icons.table_chart_rounded,
+              label: 'CSV',
+              color: const Color(0xFF21BA45),
+              onTap: () => ExportService.instance.exportarCSV(
+                tickets: historial,
+                desde:   desde,
+                hasta:   hasta,
+                context: context,
+              ),
+              large: true,
+            ),
+            const SizedBox(width: 10),
+            _ExportButton(
+              icon:  Icons.picture_as_pdf_rounded,
+              label: 'PDF',
+              color: Colors.red,
+              onTap: () => ExportService.instance.exportarPDF(
+                tickets: historial,
+                desde:   desde,
+                hasta:   hasta,
+                context: context,
+              ),
+              large: true,
+            ),
+            const SizedBox(width: 10),
+          ],
+
+          ElevatedButton.icon(
+            onPressed: onBuscar,
+            icon: const Icon(Icons.search_rounded, size: 20),
+            label: const Text(
+              'Buscar',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+            style: _buscarStyle,
+          ),
+
+          const SizedBox(width: 16),
+
+          // Rango de fechas (derecha)
           Row(
             children: [
-              ElevatedButton.icon(
-                onPressed: onBuscar,
-                icon: const Icon(Icons.search_rounded, size: 18),
-                label: const Text(
-                  'Buscar',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                ),
-                style: _buscarStyle,
+              _FechaChip(
+                label: 'DESDE',
+                fecha: _fmtResumen.format(desde),
+                onTap: onDesde,
               ),
-
-              // ✅ Solo se muestran cuando hay datos en historial
-              if (historial.isNotEmpty) ...[
-                const SizedBox(width: 10),
-                _ExportButton(
-                  icon:  Icons.table_chart_rounded,
-                  label: 'CSV',
-                  color: const Color(0xFF21BA45),
-                  onTap: () => ExportService.instance.exportarCSV(
-                    tickets: historial,
-                    desde:   desde,
-                    hasta:   hasta,
-                    context: context,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _ExportButton(
-                  icon:  Icons.picture_as_pdf_rounded,
-                  label: 'PDF',
-                  color: Colors.red,
-                  onTap: () => ExportService.instance.exportarPDF(
-                    tickets: historial,
-                    desde:   desde,
-                    hasta:   hasta,
-                    context: context,
-                  ),
-                ),
-              ],
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(Icons.arrow_forward_rounded, size: 18, color: _C.primary),
+              ),
+              _FechaChip(
+                label: 'HASTA',
+                fecha: _fmtResumen.format(hasta),
+                onTap: onHasta,
+              ),
             ],
           ),
         ],
@@ -1348,25 +1353,32 @@ class _ExportButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
+  final bool large;
 
   const _ExportButton({
     required this.icon,
     required this.label,
     required this.color,
     required this.onTap,
+    this.large = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final iconSize = large ? 20.0 : 18.0;
+    final fontSize = large ? 15.0 : 14.0;
+    final verticalPadding = large ? 16.0 : 14.0;
+    final horizontalPadding = large ? 22.0 : 18.0;
+
     return ElevatedButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, size: 18),
+      icon: Icon(icon, size: iconSize),
       label: Text(label,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: fontSize)),
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+        padding: EdgeInsets.symmetric(vertical: verticalPadding, horizontal: horizontalPadding),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 2,
       ),

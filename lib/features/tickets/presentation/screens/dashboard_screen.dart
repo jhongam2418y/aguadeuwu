@@ -306,7 +306,7 @@ class _Greeting extends StatelessWidget {
             color: _AppColors.text,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 5),
         Row(
           children: [
             Text(
