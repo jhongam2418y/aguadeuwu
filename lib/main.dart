@@ -13,6 +13,8 @@ Future<void> main() async {
   }
   await initializeDateFormatting('es', null);
   await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);

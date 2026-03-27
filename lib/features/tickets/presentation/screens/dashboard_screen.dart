@@ -98,53 +98,124 @@ class _DashboardBody extends StatelessWidget {
     final fechaHoy = _fmtFecha.format(now);
     final diaLabelUpper = _fmtDia.format(now).toUpperCase();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    // ─── Responsive: landscape vs portrait ──────────────────────────────────
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 1000;
+
+    if (isLandscape && !isMobile) {
+      // ─── Layout: 2 columnas (Landscape en pantalla grande) ──────────────
+      return Row(
         children: [
-          _Greeting(fecha: fechaHoy, diaLabel: diaLabelUpper),
-          const SizedBox(height: 20),
-
-          // Stats row
-          Row(
-            children: [
-              Expanded(
-                child: _StatCard(
-                  icon: Icons.confirmation_number_rounded,
-                  iconColor: _AppColors.primary,
-                  bgColor: _AppColors.primaryLight,
-                  label: 'Tickets Hoy',
-                  value: '${ticketsActivos.length}',
-                ),
+          // Columna izquierda
+          Expanded(
+            flex: 2,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _Greeting(fecha: fechaHoy, diaLabel: diaLabelUpper),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.confirmation_number_rounded,
+                          iconColor: _AppColors.primary,
+                          bgColor: _AppColors.primaryLight,
+                          label: 'Tickets Hoy',
+                          value: '${ticketsActivos.length}',
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.payments_rounded,
+                          iconColor: _AppColors.green,
+                          bgColor: _AppColors.greenLight,
+                          label: 'Ingresos Hoy',
+                          value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _PreciosCard(cfg: cfg),
+                  const SizedBox(height: 24),
+                  _NuevoTicketButton(onTap: onNuevoTicket),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _StatCard(
-                  icon: Icons.payments_rounded,
-                  iconColor: _AppColors.green,
-                  bgColor: _AppColors.greenLight,
-                  label: 'Ingresos Hoy',
-                  value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 14),
-
-          _PreciosCard(cfg: cfg),
-          const SizedBox(height: 24),
-
-          _NuevoTicketButton(onTap: onNuevoTicket),
-          const SizedBox(height: 24),
-
-          _HistorialInline(
-            tickets: tickets,
-            cargando: provider.cargando,
+          // Separador
+          Container(
+            width: 1,
+            color: Colors.grey.shade200,
+            margin: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          // Columna derecha
+          Expanded(
+            flex: 1,
+            child: _HistorialInline(
+              tickets: tickets,
+              cargando: provider.cargando,
+            ),
           ),
         ],
-      ),
-    );
+      );
+    } else {
+      // ─── Layout: 1 columna (Portrait o pantalla pequeña) ────────────────
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Greeting(fecha: fechaHoy, diaLabel: diaLabelUpper),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    icon: Icons.confirmation_number_rounded,
+                    iconColor: _AppColors.primary,
+                    bgColor: _AppColors.primaryLight,
+                    label: 'Tickets Hoy',
+                    value: '${ticketsActivos.length}',
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _StatCard(
+                    icon: Icons.payments_rounded,
+                    iconColor: _AppColors.green,
+                    bgColor: _AppColors.greenLight,
+                    label: 'Ingresos Hoy',
+                    value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _PreciosCard(cfg: cfg),
+            const SizedBox(height: 24),
+            _NuevoTicketButton(onTap: onNuevoTicket),
+            const SizedBox(height: 24),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 500),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: _HistorialInline(
+                tickets: tickets,
+                cargando: provider.cargando,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
 
@@ -529,49 +600,71 @@ class _HistorialInline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Header
-        Row(
-          children: [
-            const Icon(Icons.receipt_long_rounded,
-                color: _AppColors.primary, size: 20),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'TICKETS DE HOY',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: _AppColors.text,
-                  letterSpacing: 0.5,
-                ),
+    return Container(
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header sticky
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade200),
               ),
             ),
-            _CountBadge(count: tickets.length),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Body
-        if (cargando)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (tickets.isEmpty)
-          const _EmptyState()
-        else
-          // ListView.builder con shrinkWrap dentro de un Column/ScrollView
-          // es aceptable aquí porque la lista de hoy raramente supera ~200 items.
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: tickets.length,
-            itemBuilder: (_, i) => _TicketItem(ticket: tickets[i]),
+            child: Row(
+              children: [
+                const Icon(Icons.receipt_long_rounded,
+                    color: _AppColors.primary, size: 18),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'TICKETS DE HOY',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: _AppColors.text,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                _CountBadge(count: tickets.length),
+              ],
+            ),
           ),
-      ],
+
+          // Body con scroll
+          Expanded(
+            child: _HistorialScroll(
+              tickets: tickets,
+              cargando: cargando,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistorialScroll extends StatelessWidget {
+  final List<TicketModel> tickets;
+  final bool cargando;
+  const _HistorialScroll({required this.tickets, required this.cargando});
+
+  @override
+  Widget build(BuildContext context) {
+    if (cargando) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (tickets.isEmpty) {
+      return const _EmptyState();
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      itemCount: tickets.length,
+      itemBuilder: (_, i) => _TicketItem(ticket: tickets[i]),
     );
   }
 }
@@ -609,31 +702,31 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.inbox_rounded, size: 52, color: Colors.grey.shade300),
-          const SizedBox(height: 10),
-          Text(
-            'Sin tickets hoy',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade400,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.inbox_rounded, size: 48, color: Colors.grey.shade300),
+            const SizedBox(height: 10),
+            Text(
+              'Sin tickets hoy',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade500,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Los tickets emitidos aparecerán aquí',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              'Los tickets aparecerán aquí',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+            ),
+          ],
+        ),
       ),
     );
   }

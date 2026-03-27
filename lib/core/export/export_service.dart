@@ -219,7 +219,14 @@ class ExportService {
       } else {
         await file.writeAsBytes(bytes!);
       }
-      await OpenFilex.open(path);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Archivo guardado: $nombreSugerido'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } else {
       // Android/iOS: carpeta de documentos
       final dir = await FilePicker.platform.getDirectoryPath();
@@ -234,8 +241,10 @@ class ExportService {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Guardado en: $path'),
-          action: SnackBarAction(
-              label: 'Abrir', onPressed: () => OpenFilex.open(path)),
+          action: !Platform.isWindows
+              ? SnackBarAction(
+                  label: 'Abrir', onPressed: () => OpenFilex.open(path))
+              : null,
         ));
       }
     }
