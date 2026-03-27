@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -202,6 +203,37 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
         foregroundColor: Colors.white,
         title: const Text('Configuración',
             style: TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.power_settings_new_rounded),
+            tooltip: 'Salir',
+            onPressed: () async {
+              final salir = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Salir del sistema'),
+                  content: const Text('¿Deseas cerrar la aplicación?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade600,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Salir'),
+                    ),
+                  ],
+                ),
+              );
+              if (salir == true) exit(0);
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -1112,74 +1144,92 @@ class _DiaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final labelColor = Colors.blueGrey.shade500;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: esHoy ? 0.28 : 0.10),
-            blurRadius: esHoy ? 18 : 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-        border: Border.all(
-          color: esHoy ? color : color.withValues(alpha: 0.18),
-          width: esHoy ? 2.5 : 1.5,
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: esHoy ? color : color.withValues(alpha: 0.09),
-              borderRadius: BorderRadius.circular(12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact  = constraints.maxWidth < 200;
+        final hPad     = compact ? 10.0 : 16.0;
+        final vPad     = compact ? 8.0  : 12.0;
+        final hPadHdr  = compact ? 7.0  : 12.0;
+        final vPadHdr  = compact ? 5.0  : 8.0;
+        final iconSize = compact ? 15.0 : 20.0;
+        final nameSize = compact ? 11.0 : 14.0;
+        final spacing  = compact ? 7.0  : 10.0;
+        final gap      = compact ? 4.0  : 6.0;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: esHoy ? 0.28 : 0.10),
+                blurRadius: esHoy ? 18 : 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+            border: Border.all(
+              color: esHoy ? color : color.withValues(alpha: 0.18),
+              width: esHoy ? 2.5 : 1.5,
             ),
-            child: Row(
-              children: [
-                Icon(icono, color: esHoy ? Colors.white : color, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    nombreDia,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: esHoy ? Colors.white : color,
-                      fontSize: 14,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: hPadHdr, vertical: vPadHdr),
+                decoration: BoxDecoration(
+                  color: esHoy ? color : color.withValues(alpha: 0.09),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                if (esHoy)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text('HOY',
+                child: Row(
+                  children: [
+                    Icon(icono, color: esHoy ? Colors.white : color, size: iconSize),
+                    SizedBox(width: compact ? 5 : 8),
+                    Expanded(
+                      child: Text(
+                        nombreDia,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 10,
-                            letterSpacing: 1.2)),
-                  ),
-              ],
-            ),
+                          fontWeight: FontWeight.w800,
+                          color: esHoy ? Colors.white : color,
+                          fontSize: nameSize,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    if (esHoy)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 5 : 8,
+                          vertical:   compact ? 2 : 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('HOY',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 10,
+                                letterSpacing: 1.2)),
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(height: spacing),
+              Text('PRECIO ADULTO', style: _labelStyle.copyWith(color: labelColor)),
+              SizedBox(height: gap),
+              _FilaPrecio(ctrl: adultoCtrl, color: color, onAjustar: onAjustar, compact: compact),
+              SizedBox(height: spacing),
+              Text('PRECIO NIÑO', style: _labelStyle.copyWith(color: labelColor)),
+              SizedBox(height: gap),
+              _FilaPrecio(ctrl: ninoCtrl, color: color, onAjustar: onAjustar, compact: compact),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text('PRECIO ADULTO', style: _labelStyle.copyWith(color: labelColor)),
-          const SizedBox(height: 6),
-          _FilaPrecio(ctrl: adultoCtrl, color: color, onAjustar: onAjustar),
-          const SizedBox(height: 10),
-          Text('PRECIO NIÑO', style: _labelStyle.copyWith(color: labelColor)),
-          const SizedBox(height: 6),
-          _FilaPrecio(ctrl: ninoCtrl, color: color, onAjustar: onAjustar),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1191,25 +1241,34 @@ class _FilaPrecio extends StatelessWidget {
   final TextEditingController ctrl;
   final Color color;
   final void Function(TextEditingController, double) onAjustar;
+  final bool compact;
 
   const _FilaPrecio({
     required this.ctrl,
     required this.color,
     required this.onAjustar,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final fieldFontSize  = compact ? 14.0 : 18.0;
+    final prefixFontSize = compact ? 11.0 : 13.0;
+    final margin         = compact ? 4.0  : 7.0;
+    final leftPad        = compact ? 5.0  : 9.0;
+    final vertPad        = compact ? 8.0  : 11.0;
+
     return Row(
       children: [
         _BtnPrecio(
           icono: Icons.remove_rounded,
           color: color,
           onTap: () => onAjustar(ctrl, -0.5),
+          compact: compact,
         ),
         Expanded(
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 7),
+            margin: EdgeInsets.symmetric(horizontal: margin),
             decoration: BoxDecoration(
               border: Border.all(
                   color: color.withValues(alpha: 0.35), width: 1.5),
@@ -1218,29 +1277,33 @@ class _FilaPrecio extends StatelessWidget {
             child: Row(
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 9),
+                  padding: EdgeInsets.only(left: leftPad),
                   child: Text('S/',
                       style: TextStyle(
                           color: color,
                           fontWeight: FontWeight.w700,
-                          fontSize: 13)),
+                          fontSize: prefixFontSize)),
                 ),
                 Expanded(
                   child: TextField(
                     controller: ctrl,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 18, color: color),
+                        fontWeight: FontWeight.w800,
+                        fontSize: fieldFontSize,
+                        color: color),
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
                     ],
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       border: InputBorder.none,
                       isDense: true,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 4, vertical: 11),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: vertPad,
+                      ),
                     ),
                   ),
                 ),
@@ -1252,6 +1315,7 @@ class _FilaPrecio extends StatelessWidget {
           icono: Icons.add_rounded,
           color: color,
           onTap: () => onAjustar(ctrl, 0.5),
+          compact: compact,
         ),
       ],
     );
@@ -1265,22 +1329,28 @@ class _BtnPrecio extends StatelessWidget {
   final IconData icono;
   final Color color;
   final VoidCallback onTap;
+  final bool compact;
 
   const _BtnPrecio({
     required this.icono,
     required this.color,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final pad      = compact ? 8.0  : 13.0;
+    final iconSize = compact ? 17.0 : 22.0;
+    final radius   = compact ? 10.0 : 13.0;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(13),
+        padding: EdgeInsets.all(pad),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(radius),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.35),
@@ -1289,7 +1359,7 @@ class _BtnPrecio extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icono, color: Colors.white, size: 22),
+        child: Icon(icono, color: Colors.white, size: iconSize),
       ),
     );
   }
