@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
 
 import '../../../configuracion/presentation/providers/config_provider.dart';
 import '../providers/ticket_provider.dart';
@@ -163,18 +163,30 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
         setState(() => _guardado = true);
       }
       final pdf = await _buildPdf();
-      
-      // Guardar el PDF en la carpeta de Documentos del usuario
       final pdfBytes = await pdf.save();
-      final nombreArchivo = 'ticket_$_ticketDbId.pdf';
-      final docsDir = Directory.systemTemp;
-      final archivoPath = '${docsDir.path}/$nombreArchivo';
-      final archivo = File(archivoPath);
-      await archivo.writeAsBytes(pdfBytes);
-      
-      _showSnack('Ticket guardado en: $archivoPath');
+
+      final nombreImpresora = context.read<ConfigProvider>().nombreImpresora.trim();
+
+      if (nombreImpresora.isNotEmpty) {
+        // Buscar la impresora por nombre y enviar directo
+        final impresoras = await Printing.listPrinters();
+        final impresora = impresoras.firstWhere(
+          (p) => p.name == nombreImpresora,
+          orElse: () => throw Exception(
+              'Impresora "$nombreImpresora" no encontrada. Verifica el nombre en Configuración.'),
+        );
+        await Printing.directPrintPdf(
+          printer: impresora,
+          onLayout: (_) async => pdfBytes,
+        );
+      } else {
+        // Sin impresora configurada: abrir diálogo del sistema
+        await Printing.layoutPdf(onLayout: (_) async => pdfBytes);
+      }
+
+      _showSnack('Ticket impreso correctamente');
     } catch (e) {
-      _showSnack('Error al guardar: $e', bg: Colors.red);
+      _showSnack('Error al imprimir: $e', bg: Colors.red);
     } finally {
       _setLoading(false);
     }
