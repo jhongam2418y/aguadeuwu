@@ -90,7 +90,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    for (final c in [..._adultoCtrls, ..._ninoCtrls]) c.dispose();
+    for (final c in [..._adultoCtrls, ..._ninoCtrls]) {
+      c.dispose();
+    }
     _impresoraCtrl.dispose();
     super.dispose();
   }
@@ -216,6 +218,10 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 28),
+                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
                       child: const Text('Cancelar'),
                     ),
                     ElevatedButton(
@@ -223,6 +229,8 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade600,
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 28),
+                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                       ),
                       child: const Text('Salir'),
                     ),
@@ -514,9 +522,10 @@ class _HistorialHeader extends StatelessWidget {
   static final _buscarStyle = ElevatedButton.styleFrom(
     backgroundColor: _C.primary,
     foregroundColor: Colors.white,
-    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 26),
+    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     elevation: 2,
+    textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
   );
 
   @override
@@ -1435,10 +1444,10 @@ class _ExportButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconSize = large ? 20.0 : 18.0;
-    final fontSize = large ? 15.0 : 14.0;
-    final verticalPadding = large ? 16.0 : 14.0;
-    final horizontalPadding = large ? 22.0 : 18.0;
+    final iconSize = large ? 24.0 : 18.0;
+    final fontSize = large ? 17.0 : 14.0;
+    final verticalPadding = large ? 20.0 : 14.0;
+    final horizontalPadding = large ? 28.0 : 18.0;
 
     return ElevatedButton.icon(
       onPressed: onTap,

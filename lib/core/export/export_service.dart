@@ -161,6 +161,7 @@ class ExportService {
     );
 
     final bytes = await pdf.save();
+    if (!context.mounted) return;
     await _guardarArchivo(
       contenido: null,
       bytes: bytes,

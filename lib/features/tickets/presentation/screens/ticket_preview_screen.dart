@@ -166,7 +166,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
       
       // Guardar el PDF en la carpeta de Documentos del usuario
       final pdfBytes = await pdf.save();
-      final nombreArchivo = 'ticket_${_ticketDbId}.pdf';
+      final nombreArchivo = 'ticket_$_ticketDbId.pdf';
       final docsDir = Directory.systemTemp;
       final archivoPath = '${docsDir.path}/$nombreArchivo';
       final archivo = File(archivoPath);
