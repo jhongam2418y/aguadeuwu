@@ -156,6 +156,8 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
 
   Future<void> _imprimir() async {
     _setLoading(true);
+    // Leer el nombre antes de cualquier await para evitar uso de context tras gap async
+    final nombreImpresora = context.read<ConfigProvider>().nombreImpresora.trim();
     try {
       if (!_guardado) {
         _ticketDbId = await widget.onGuardar();
@@ -164,8 +166,6 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
       }
       final pdf = await _buildPdf();
       final pdfBytes = await pdf.save();
-
-      final nombreImpresora = context.read<ConfigProvider>().nombreImpresora.trim();
 
       if (nombreImpresora.isNotEmpty) {
         // Buscar la impresora por nombre y enviar directo

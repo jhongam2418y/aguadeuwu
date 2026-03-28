@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/update/update_dialog.dart';
 import '../../../configuracion/presentation/providers/config_provider.dart';
 import '../../../configuracion/presentation/screens/configuracion_screen.dart';
 import '../../data/models/ticket_model.dart';
@@ -39,9 +40,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<TicketProvider>().cargarTicketsHoy(),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TicketProvider>().cargarTicketsHoy();
+      // Verificar actualizaciones al iniciar (sin bloquear la UI)
+      checkAndPromptUpdate(context);
+    });
   }
 
   Future<void> _irABoleteria() async {
