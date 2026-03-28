@@ -89,133 +89,92 @@ class _DashboardBody extends StatelessWidget {
     final provider = context.watch<TicketProvider>();
     final cfg = context.watch<ConfigProvider>();
 
-    // Cálculos locales (baratos, no justifican Selector extra aquí)
     final tickets = provider.ticketsHoy;
     final ticketsActivos = tickets.where((t) => !t.anulado).toList();
     final totalIngresos = ticketsActivos.fold<double>(0.0, (s, t) => s + t.monto);
 
-    final now = DateTime.now();
-    final fechaHoy = _fmtFecha.format(now);
-    final diaLabelUpper = _fmtDia.format(now).toUpperCase();
-
-    // ─── Responsive: landscape vs portrait ──────────────────────────────────
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 1000;
-
-    if (isLandscape && !isMobile) {
-      // ─── Layout: 2 columnas (Landscape en pantalla grande) ──────────────
-      return Row(
+    // ─── Layout fijo desktop táctil: 2 columnas sin scroll ──────────────────
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Columna izquierda
+          // ── Columna izquierda: estadísticas + tarifas + botón principal ───
           Expanded(
-            flex: 2,
+            flex: 3,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Greeting(fecha: fechaHoy, diaLabel: diaLabelUpper),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.confirmation_number_rounded,
-                          iconColor: _AppColors.primary,
-                          bgColor: _AppColors.primaryLight,
-                          label: 'Tickets Hoy',
-                          value: '${ticketsActivos.length}',
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.payments_rounded,
-                          iconColor: _AppColors.green,
-                          bgColor: _AppColors.greenLight,
-                          label: 'Ingresos Hoy',
-                          value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
-                        ),
-                      ),
-                    ],
+                  _Greeting(
+                    fecha: _fmtFecha.format(DateTime.now()),
+                    diaLabel: _fmtDia.format(DateTime.now()).toUpperCase(),
                   ),
-                  const SizedBox(height: 14),
-                  _PreciosCard(cfg: cfg),
-                  const SizedBox(height: 24),
-                  _NuevoTicketButton(onTap: onNuevoTicket),
-                ],
-              ),
+                  const SizedBox(height: 20),
+                  // Tarjetas de resumen
+                  Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.confirmation_number_rounded,
+                        iconColor: _AppColors.primary,
+                        bgColor: _AppColors.primaryLight,
+                        label: 'Tickets Hoy',
+                        value: '${ticketsActivos.length}',
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.payments_rounded,
+                        iconColor: _AppColors.green,
+                        bgColor: _AppColors.greenLight,
+                        label: 'Ingresos Hoy',
+                        value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _PreciosCard(cfg: cfg),
+                const SizedBox(height: 24),
+                _NuevoTicketButton(onTap: onNuevoTicket),
+              ],
+            ),
             ),
           ),
-          // Separador
+          // Separador vertical
           Container(
             width: 1,
             color: Colors.grey.shade200,
-            margin: const EdgeInsets.symmetric(vertical: 16),
+            margin: const EdgeInsets.symmetric(horizontal: 20),
           ),
-          // Columna derecha
+          // ── Columna derecha: historial a pantalla completa ─────────────────
           Expanded(
-            flex: 1,
-            child: _HistorialInline(
-              tickets: tickets,
-              cargando: provider.cargando,
-            ),
-          ),
-        ],
-      );
-    } else {
-      // ─── Layout: 1 columna (Portrait o pantalla pequeña) ────────────────
-      return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Greeting(fecha: fechaHoy, diaLabel: diaLabelUpper),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.confirmation_number_rounded,
-                    iconColor: _AppColors.primary,
-                    bgColor: _AppColors.primaryLight,
-                    label: 'Tickets Hoy',
-                    value: '${ticketsActivos.length}',
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.payments_rounded,
-                    iconColor: _AppColors.green,
-                    bgColor: _AppColors.greenLight,
-                    label: 'Ingresos Hoy',
-                    value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _PreciosCard(cfg: cfg),
-            const SizedBox(height: 24),
-            _NuevoTicketButton(onTap: onNuevoTicket),
-            const SizedBox(height: 24),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 500),
+            flex: 2,
+            child: Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: _AppColors.primary.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: _HistorialInline(
                 tickets: tickets,
                 cargando: provider.cargando,
               ),
             ),
-          ],
-        ),
-      );
-    }
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -249,31 +208,57 @@ class _TopBar extends StatelessWidget {
             child: const Icon(Icons.water_rounded, color: Colors.white, size: 26),
           ),
           const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'PISCIGRANJA',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 3,
-                  ),
+          // Título de la app
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'PISCIGRANJA',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 3,
                 ),
-                Text(
-                  'SISTEMA DE BOLETERÍA',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.5,
-                  ),
+              ),
+              Text(
+                'SISTEMA DE BOLETERÍA',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          const Spacer(),
+          // Fecha y día actuales
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _fmtFecha.format(DateTime.now()),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                _fmtDia.format(DateTime.now()).toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
           IconButton(
             onPressed: onSettingsTap,
             icon: const Icon(Icons.settings_rounded, color: Colors.white, size: 26),
@@ -454,7 +439,7 @@ class _PreciosCard extends StatelessWidget {
           const Text(
             'TARIFAS VIGENTES',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               color: _AppColors.textSoft,
               letterSpacing: 0.8,
