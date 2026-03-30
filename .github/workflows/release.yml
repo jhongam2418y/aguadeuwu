@@ -1,55 +1,53 @@
 name: Build and Release Windows App
 
 on:
-push:
-tags:
-- 'v*'
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-build:
-runs-on: windows-latest
+  build:
+    runs-on: windows-latest
 
-```
-steps:
-  # 📥 Clonar repo
-  - name: Checkout
-    uses: actions/checkout@v4
+    steps:
+      # 📥 Clonar repo
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  # 🧰 Instalar Flutter
-  - name: Setup Flutter
-    uses: subosito/flutter-action@v2
-    with:
-      flutter-version: '3.19.0'
+      # 🧰 Instalar Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: stable
 
-  # 📦 Dependencias
-  - name: Install dependencies
-    run: flutter pub get
+      # 📦 Dependencias
+      - name: Install dependencies
+        run: flutter pub get
 
-  # 🔧 Build Windows
-  - name: Build Windows
-    run: flutter build windows
+      # 🔧 Build Windows
+      - name: Build Windows
+        run: flutter build windows --release
 
-  # 🧰 Instalar Inno Setup
-  - name: Install Inno Setup
-    run: choco install innosetup -y
+      # 🧰 Instalar Inno Setup
+      - name: Install Inno Setup
+        run: choco install innosetup -y
 
-  # ✏️ Actualizar versión en installer.iss
-  - name: Set version
-    run: |
-      $version = "${{ github.ref_name }}"
-      $version = $version -replace "v", ""
-      (Get-Content installer.iss) -replace "AppVersion=.*", "AppVersion=$version" | Set-Content installer.iss
+      # ✏️ Actualizar versión en el script del instalador
+      - name: Set version
+        run: |
+          $version = "${{ github.ref_name }}" -replace "^v", ""
+          (Get-Content installer.iss) -replace "AppVersion=.*", "AppVersion=$version" | Set-Content installer.iss
 
-  # 📦 Compilar instalador
-  - name: Build Installer
-    run: |
-      & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+      # 📦 Crear instalador
+      - name: Build Installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
 
-  # 🚀 Crear release
-  - name: Create Release
-    uses: softprops/action-gh-release@v2
-    with:
-      files: output/Instalador_Piscigranja.exe
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
+      # 🚀 Publicar release en GitHub
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: output/setup_pos.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
