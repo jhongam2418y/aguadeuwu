@@ -36,11 +36,7 @@ Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; Group
 Name: "{localappdata}\Piscigranja"; Flags: uninsneveruninstall
 
 [Files]
-Source: "build\windows\x64\runner\Release\piscigranja.exe"; DestDir: "{app}"; Flags: ignoreversion
-
-Source: "build\windows\x64\runner\Release*.dll"; DestDir: "{app}"; Flags: ignoreversion
-
-Source: "build\windows\x64\runner\Release\data*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Piscigranja"; Filename: "{app}\piscigranja.exe"
