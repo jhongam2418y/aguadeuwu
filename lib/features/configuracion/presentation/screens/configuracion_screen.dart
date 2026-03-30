@@ -425,7 +425,7 @@ class _TabImpresoraState extends State<_TabImpresora> {
               : ListView.separated(
                   shrinkWrap: true,
                   itemCount: impresoras.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final nombre = impresoras[i].name;
                     return ListTile(
@@ -815,7 +815,7 @@ class _HistorialTabla extends StatelessWidget {
                       ? const _TablaVacia()
                       : ListView.separated(
                           itemCount: historial.length,
-                          separatorBuilder: (_, _) => Divider(
+                          separatorBuilder: (_, __) => Divider(
                             height: 1,
                             thickness: 1,
                             color: Colors.grey.shade100,
