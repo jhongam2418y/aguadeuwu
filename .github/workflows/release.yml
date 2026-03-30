@@ -4,56 +4,105 @@ on:
   push:
     tags:
       - 'v*'
+
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 60
 
     steps:
-      # 📥 Clonar repo
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 🧰 Instalar Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.4'  # <-- versión estable con Dart >= 3.11
+          flutter-version: '3.24.5'
           channel: stable
-          cache: false
+          cache: true
 
-      # 🔍 Verificar versión
       - name: Flutter Doctor
-        run: flutter doctor
+        run: flutter doctor -v
 
-      # 📦 Dependencias
       - name: Install dependencies
         run: flutter pub get
 
-      # 🔧 Build Windows
+      - name: Run tests
+        run: flutter test
+        continue-on-error: false
+
       - name: Build Windows
         run: flutter build windows --release
 
-      # 🧰 Instalar Inno Setup
       - name: Install Inno Setup
-        run: choco install innosetup -y
+        run: choco install innosetup --yes --no-progress
 
-      # ✏️ Actualizar versión en el instalador
-      - name: Set version
+      - name: Extract version and update installer
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -notmatch '^v\d+\.\d+\.\d+') {
+            Write-Error "Invalid tag format: $tag. Expected: v1.2.3"
+            exit 1
+          }
+          $version = $tag -replace "^v", ""
+          Write-Host "Building version: $version"
+          
+          $issPath = "installer.iss"
+          if (-not (Test-Path $issPath)) {
+            Write-Error "installer.iss not found"
+            exit 1
+          }
+          
+          (Get-Content $issPath -Raw) -replace 'AppVersion=.*', "AppVersion=$version" |
+            Set-Content $issPath -NoNewline
+          
+          Write-Host "Updated installer.iss with version $version"
+
+      - name: Build Installer
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Error "ISCC.exe not found at $iscc"
+            exit 1
+          }
+          & $iscc installer.iss
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Inno Setup compilation failed with exit code $LASTEXITCODE"
+            exit $LASTEXITCODE
+          }
+
+      - name: Verify output file
+        shell: pwsh
+        run: |
+          $output = "output/Instalador_Piscigranja.exe"
+          if (-not (Test-Path $output)) {
+            Write-Error "Installer not found at: $output"
+            exit 1
+          }
+          $size = (Get-Item $output).Length / 1MB
+          Write-Host "Installer size: $([math]::Round($size, 2)) MB"
+
+      - name: Generate release notes
+        id: release_notes
+        shell: pwsh
         run: |
           $version = "${{ github.ref_name }}" -replace "^v", ""
-          (Get-Content installer.iss) -replace "AppVersion=.*", "AppVersion=$version" | Set-Content installer.iss
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $notes = "## Piscigranja v$version`n`nPublicado: $date`n`n### Instalación`nDescarga y ejecuta ``Instalador_Piscigranja.exe``"
+          echo "notes=$notes" >> $env:GITHUB_OUTPUT
 
-      # 📦 Crear instalador
-      - name: Build Installer
-        run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
-
-      # 🚀 Crear release
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: output/Instalador_Piscigranja.exe
+          body: ${{ steps.release_notes.outputs.notes }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
