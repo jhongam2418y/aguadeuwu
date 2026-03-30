@@ -300,7 +300,7 @@ class _Header extends StatelessWidget {
                         letterSpacing: 1)),
                 Text('Emisión de comprobante de ingreso',
                     style:
-                        TextStyle(color: AppColors.lightGrey, fontSize: 12)),
+                        TextStyle(color: AppColors.lightBlueBackground, fontSize: 13)),
               ],
             ),
           ),
@@ -647,7 +647,7 @@ class _BottomBar extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         color: AppColors.primaryBlue)),
                 Text('Adultos: $adultos   Niños: $ninos',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 13, color: Colors.grey)),
               ],
             ),
           ),

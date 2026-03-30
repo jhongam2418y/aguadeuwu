@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:piscigranja/core/export/export_service.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/config_provider.dart';
@@ -219,8 +220,8 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 28),
-                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 30),
+                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                       ),
                       child: const Text('Cancelar'),
                     ),
@@ -229,8 +230,8 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade600,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 28),
-                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 30),
+                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                       ),
                       child: const Text('Salir'),
                     ),
@@ -385,18 +386,78 @@ class _TabPrecios extends StatelessWidget {
 // =============================================================================
 // Tab Impresora
 // =============================================================================
-class _TabImpresora extends StatelessWidget {
+class _TabImpresora extends StatefulWidget {
   final TextEditingController ctrl;
   final VoidCallback onGuardar;
 
   const _TabImpresora({required this.ctrl, required this.onGuardar});
 
+  @override
+  State<_TabImpresora> createState() => _TabImpresoraState();
+}
+
+class _TabImpresoraState extends State<_TabImpresora> {
   static final _saveStyle = ElevatedButton.styleFrom(
     backgroundColor: _C.primary,
     foregroundColor: Colors.white,
-    padding: const EdgeInsets.symmetric(vertical: 14),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    padding: const EdgeInsets.symmetric(vertical: 22),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
   );
+
+  static final _listStyle = ElevatedButton.styleFrom(
+    backgroundColor: _C.primary,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(vertical: 22),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  );
+
+  Future<void> _listarImpresoras() async {
+    final impresoras = await Printing.listPrinters();
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Impresoras disponibles'),
+        content: SizedBox(
+          width: 400,
+          child: impresoras.isEmpty
+              ? const Text('No se encontraron impresoras instaladas.')
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: impresoras.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (_, i) {
+                    final nombre = impresoras[i].name;
+                    return ListTile(
+                      title: Text(nombre),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.copy_rounded, size: 18),
+                        tooltip: 'Copiar nombre',
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: nombre));
+                          widget.ctrl.text = nombre;
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('"$nombre" copiado al campo'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +472,7 @@ class _TabImpresora extends StatelessWidget {
             descripcion: 'Ingresa el nombre exacto del dispositivo',
             icono:       Icons.print_rounded,
             child: TextField(
-              controller: ctrl,
+              controller: widget.ctrl,
               decoration: const InputDecoration(
                 hintText: 'Ej: POS-80C, EPSON TM-T20',
                 border: OutlineInputBorder(),
@@ -421,15 +482,33 @@ class _TabImpresora extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onGuardar,
-            icon: const Icon(Icons.save_rounded),
-            label: const Text(
-              'GUARDAR IMPRESORA',
-              style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1),
-            ),
-            style: _saveStyle,
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _listarImpresoras,
+                  icon: const Icon(Icons.search_rounded, size: 24),
+                  label: const Text(
+                    'LISTAR IMPRESORAS',
+                    style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1, fontSize: 16),
+                  ),
+                  style: _listStyle,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: widget.onGuardar,
+                  icon: const Icon(Icons.save_rounded, size: 24),
+                  label: const Text(
+                    'GUARDAR IMPRESORA',
+                    style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1, fontSize: 16),
+                  ),
+                  style: _saveStyle,
+                ),
+              ),
+            ],
           ),
         ],
       ),

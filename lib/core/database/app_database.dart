@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -6,22 +8,65 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static Database? _db;
+  // Completer usado para serializar llamadas concurrentes durante la init.
+  static Completer<Database>? _initCompleter;
 
+  /// Devuelve la instancia de la base de datos.
+  /// Si ya está abierta la retorna de inmediato.
+  /// Si está en proceso de apertura, todos los llamantes esperan al mismo
+  /// Completer (no se abre la BD dos veces en paralelo).
   Future<Database> get database async {
-    _db ??= await _initDatabase();
+    if (_db != null) return _db!;
+    if (_initCompleter != null) return _initCompleter!.future;
+
+    _initCompleter = Completer<Database>();
+    try {
+      _db = await _initDatabase();
+      _initCompleter!.complete(_db);
+    } catch (e, st) {
+      final c = _initCompleter!;
+      _initCompleter = null; // permite reintentar en el próximo acceso
+      c.completeError(e, st);
+      rethrow;
+    }
     return _db!;
   }
 
   Future<Database> _initDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'piscigranja.db');
+    // LOCALAPPDATA apunta a C:\Users\<usuario>\AppData\Local en todas las
+    // versiones de Windows.  Está disponible en producción (.exe) y
+    // sobrevive a desinstalaciones que no limpien AppData\Local.
+    final localAppData = Platform.environment['LOCALAPPDATA'];
+    if (localAppData == null || localAppData.isEmpty) {
+      throw StateError(
+          '[AppDatabase] LOCALAPPDATA no está definida. '
+          'Asegúrate de ejecutar la app como usuario normal (no como SYSTEM).');
+    }
 
-    return openDatabase(
-      path,
-      version: 3,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
+    // Construir la ruta del directorio de datos.
+    final dbDir = Directory(join(localAppData, 'Piscigranja'));
+
+    try {
+      // Crea la carpeta si no existe. recursive: true no lanza error si ya existe.
+      await dbDir.create(recursive: true);
+    } on PathAccessException catch (e) {
+      throw StateError(
+          '[AppDatabase] Sin permisos para crear el directorio ${dbDir.path}: $e');
+    }
+
+    final dbPath = join(dbDir.path, 'piscigranja.db');
+
+    try {
+      return await openDatabase(
+        dbPath,
+        version: 3,
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+      );
+    } catch (e) {
+      throw StateError(
+          '[AppDatabase] No se pudo abrir la base de datos en $dbPath: $e');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
