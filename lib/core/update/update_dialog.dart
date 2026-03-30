@@ -68,7 +68,7 @@ class _UpdateAvailableDialog extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              _VersionChip(label: 'Actual', version: kAppVersion, muted: true),
+              _VersionChip(label: 'Actual', version: info.currentVersion, muted: true),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
                 child: Icon(Icons.arrow_forward_rounded,
