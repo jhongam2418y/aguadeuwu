@@ -19,7 +19,13 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.0'
-          
+          channel: stable
+          cache: false
+
+      # 🔍 Verificar versión
+      - name: Flutter Doctor
+        run: flutter doctor
+
       # 📦 Dependencias
       - name: Install dependencies
         run: flutter pub get
@@ -32,7 +38,7 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup -y
 
-      # ✏️ Actualizar versión en el script del instalador
+      # ✏️ Actualizar versión en el instalador
       - name: Set version
         run: |
           $version = "${{ github.ref_name }}" -replace "^v", ""
@@ -43,10 +49,10 @@ jobs:
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
 
-      # 🚀 Publicar release en GitHub
+      # 🚀 Crear release
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: output/setup_pos.exe
+          files: output/Instalador_Piscigranja.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
