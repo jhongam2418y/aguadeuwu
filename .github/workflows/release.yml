@@ -100,7 +100,7 @@ jobs:
       - name: Verify installer output
         shell: pwsh
         run: |
-          $output = "output\setup_pos.exe"
+          $output = "output\PiscigranjaInstaller.exe"
           if (-not (Test-Path $output)) {
             Write-Error "Instalador no encontrado en: $output"
             Write-Host "Contenido de output\:"
@@ -123,7 +123,7 @@ jobs:
           Publicado: $date
 
           ### Instalación
-          1. Descarga ``setup_pos.exe``
+          1. Descarga ``PiscigranjaInstaller.exe``
           2. Ejecuta el instalador como administrador
           3. Sigue el asistente de instalación
 
@@ -136,7 +136,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: output/setup_pos.exe
+          files: output/PiscigranjaInstaller.exe
           body_path: release_notes.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
