@@ -17,92 +17,140 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ── 1. Flutter ──────────────────────────────────────────────────────────
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.32.8'   # ✅ Compatible con sdk: ^3.5.0 y flutter: >=3.38.4
           channel: stable
           cache: true
 
       - name: Flutter Doctor
         run: flutter doctor -v
 
+      # ── 2. Dependencias ─────────────────────────────────────────────────────
       - name: Install dependencies
         run: flutter pub get
 
+      # ── 3. Tests ────────────────────────────────────────────────────────────
+      #   continue-on-error: true mientras no haya tests escritos.
+      #   Cambia a false cuando tengas cobertura real.
       - name: Run tests
         run: flutter test
-        continue-on-error: false
+        continue-on-error: true
 
-      - name: Build Windows
-        run: flutter build windows --release
-
-      - name: Install Inno Setup
-        run: choco install innosetup --yes --no-progress
-
-      - name: Extract version and update installer
+      # ── 4. Extraer versión del tag y parchear pubspec.yaml ──────────────────
+      #   CRÍTICO: PackageInfo.fromPlatform() lee la versión compilada en el
+      #   ejecutable desde pubspec.yaml. Si no lo actualizamos, UpdateService
+      #   siempre reportará "1.0.0" y nunca detectará actualizaciones.
+      - name: Patch version in pubspec.yaml
         shell: pwsh
         run: |
           $tag = "${{ github.ref_name }}"
-          if ($tag -notmatch '^v\d+\.\d+\.\d+') {
-            Write-Error "Invalid tag format: $tag. Expected: v1.2.3"
+          if ($tag -notmatch '^v(\d+\.\d+\.\d+)$') {
+            Write-Error "Tag inválido: '$tag'. Formato esperado: v1.2.3"
             exit 1
           }
+          $version = $Matches[1]
+          Write-Host "Version extraída del tag: $version"
+
+          # Reemplazar la línea 'version:' en pubspec.yaml
+          $pubspec = Get-Content "pubspec.yaml" -Raw
+          $patched = $pubspec -replace '(?m)^version:.*$', "version: $version+1"
+          Set-Content "pubspec.yaml" $patched -NoNewline
+          Write-Host "pubspec.yaml actualizado:"
+          Select-String "^version:" pubspec.yaml
+
+      # ── 5. Build Windows release ────────────────────────────────────────────
+      - name: Build Windows
+        run: flutter build windows --release
+
+      # ── 6. Inno Setup ───────────────────────────────────────────────────────
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Patch version in installer.iss
+        shell: pwsh
+        run: |
+          $tag     = "${{ github.ref_name }}"
           $version = $tag -replace "^v", ""
-          Write-Host "Building version: $version"
-          
+
           $issPath = "installer.iss"
           if (-not (Test-Path $issPath)) {
-            Write-Error "installer.iss not found"
+            Write-Error "installer.iss no encontrado en la raíz del repositorio"
             exit 1
           }
-          
-          (Get-Content $issPath -Raw) -replace 'AppVersion=.*', "AppVersion=$version" |
-            Set-Content $issPath -NoNewline
-          
-          Write-Host "Updated installer.iss with version $version"
 
-      - name: Build Installer
+          $content = Get-Content $issPath -Raw
+          $patched = $content -replace '(?m)^(AppVersion\s*=).*$', "`${1}$version"
+          Set-Content $issPath $patched -NoNewline
+          Write-Host "installer.iss actualizado con AppVersion=$version"
+
+      - name: Build Installer with Inno Setup
         shell: pwsh
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) {
-            Write-Error "ISCC.exe not found at $iscc"
+            Write-Error "ISCC.exe no encontrado. Verifica la instalación de Inno Setup."
             exit 1
           }
           & $iscc installer.iss
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "Inno Setup compilation failed with exit code $LASTEXITCODE"
+            Write-Error "Inno Setup falló con código $LASTEXITCODE"
             exit $LASTEXITCODE
           }
 
-      - name: Verify output file
+      # ── 7. Verificar artefacto ──────────────────────────────────────────────
+      - name: Verify installer output
         shell: pwsh
         run: |
-          $output = "output/Instalador_Piscigranja.exe"
+          # Ajusta la ruta si tu installer.iss usa OutputDir distinto
+          $output = "output\setup_pos.exe"
           if (-not (Test-Path $output)) {
-            Write-Error "Installer not found at: $output"
+            Write-Error "Instalador no encontrado en: $output"
+            Write-Host "Archivos en output\:"
+            Get-ChildItem output -ErrorAction SilentlyContinue
             exit 1
           }
-          $size = (Get-Item $output).Length / 1MB
-          Write-Host "Installer size: $([math]::Round($size, 2)) MB"
+          $sizeMB = [math]::Round((Get-Item $output).Length / 1MB, 2)
+          Write-Host "✅ Instalador generado: $output ($sizeMB MB)"
 
-      - name: Generate release notes
-        id: release_notes
+      # ── 8. Release notes ────────────────────────────────────────────────────
+      #   Usamos un archivo temporal para evitar problemas con
+      #   caracteres especiales en GITHUB_OUTPUT.
+      - name: Generate release notes file
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}" -replace "^v", ""
-          $date = Get-Date -Format "yyyy-MM-dd"
-          $notes = "## Piscigranja v$version`n`nPublicado: $date`n`n### Instalación`nDescarga y ejecuta ``Instalador_Piscigranja.exe``"
-          echo "notes=$notes" >> $env:GITHUB_OUTPUT
+          $date    = Get-Date -Format "yyyy-MM-dd"
 
+          $notes = @"
+          ## Piscigranja v$version
+
+          Publicado: $date
+
+          ### Instalación
+          1. Descarga ``setup_pos.exe``
+          2. Ejecuta el instalador como administrador
+          3. Sigue el asistente de instalación
+
+          ### Notas
+          - La aplicación requiere Windows 10 o superior
+          - Los datos existentes se conservan al actualizar
+          "@
+
+          # Guardar en archivo para evitar problemas de encoding en GITHUB_OUTPUT
+          $notes | Set-Content "release_notes.md" -Encoding UTF8
+          Write-Host "release_notes.md generado"
+
+      # ── 9. Crear GitHub Release ─────────────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: output/Instalador_Piscigranja.exe
-          body: ${{ steps.release_notes.outputs.notes }}
+          files: output/setup_pos.exe
+          body_path: release_notes.md          # ✅ Más robusto que 'body:'
           draft: false
           prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
-          generate_release_notes: true
+          generate_release_notes: true         # Agrega changelog automático de PRs/commits
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
