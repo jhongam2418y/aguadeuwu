@@ -202,13 +202,14 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           // Logo icon
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.asset(
+              'assets/images/app_icon.png',
+              width: 48,
+              height: 48,
+              fit: BoxFit.cover,
             ),
-            child: const Icon(Icons.water_rounded, color: Colors.white, size: 26),
           ),
           const SizedBox(width: 12),
           // Título de la app

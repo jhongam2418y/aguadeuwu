@@ -281,6 +281,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                                   total:        _total,
                                   fecha:        _fecha,
                                   hora:         _hora,
+                                  metodoPago:   _metodoPago,
                                 ),
                               ),
                             ),
@@ -580,7 +581,7 @@ class _PrinterInfo extends StatelessWidget {
 class _TicketCard extends StatelessWidget {
   final int adultos, ninos;
   final double precioAdulto, precioNino, total;
-  final String fecha, hora;
+  final String fecha, hora, metodoPago;
 
   const _TicketCard({
     required this.adultos,
@@ -590,6 +591,7 @@ class _TicketCard extends StatelessWidget {
     required this.total,
     required this.fecha,
     required this.hora,
+    required this.metodoPago,
   });
 
   // Sombra estática
@@ -656,6 +658,11 @@ class _TicketCard extends StatelessWidget {
                     _TicketRow(label: 'HORA:', value: hora),
                     const SizedBox(height: 7),
                     const _TicketRow(label: 'TIPO:', value: 'ENTRADA GENERAL'),
+                    const SizedBox(height: 7),
+                    _TicketRow(
+                      label: 'PAGO:',
+                      value: '${metodoPago[0].toUpperCase()}${metodoPago.substring(1)}',
+                    ),
                   ],
                 ),
               ),

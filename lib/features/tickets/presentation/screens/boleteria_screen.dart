@@ -376,6 +376,7 @@ class _ContadorCard extends StatelessWidget {
   final IconData icono;
   final int valor;
   final ValueChanged<int> onChanged;
+  static const int _max = 20;
 
   const _ContadorCard({
     required this.label,
@@ -449,7 +450,7 @@ class _ContadorCard extends StatelessWidget {
           ),
           _FlechaBtn(
             icono: Icons.add_rounded,
-            habilitado: true,
+            habilitado: valor < _max,
             onTap: () => onChanged(valor + 1),
           ),
         ],
