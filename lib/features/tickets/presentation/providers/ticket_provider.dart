@@ -7,17 +7,26 @@ class TicketProvider extends ChangeNotifier {
 
   List<TicketModel> _ticketsHoy = [];
   bool _cargando = false;
+  String? _error;
 
   List<TicketModel> get ticketsHoy => List.unmodifiable(_ticketsHoy);
   bool get cargando => _cargando;
+  String? get error => _error;
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
 
   Future<void> cargarTicketsHoy() async {
     _cargando = true;
+    _error = null;
     notifyListeners();
     try {
       _ticketsHoy = await _repo.obtenerTicketsHoy();
-    } catch (_) {
+    } catch (e) {
       _ticketsHoy = [];
+      _error = 'Error al cargar tickets: $e';
     } finally {
       _cargando = false;
       notifyListeners();
@@ -42,12 +51,17 @@ class TicketProvider extends ChangeNotifier {
   }
 
   Future<void> anularTicket(int id) async {
-    await _repo.anularTicket(id);
-    final idx = _ticketsHoy.indexWhere((t) => t.id == id);
-    if (idx != -1) {
-      _ticketsHoy[idx] = _ticketsHoy[idx].copyWith(anulado: true);
+    try {
+      await _repo.anularTicket(id);
+      final idx = _ticketsHoy.indexWhere((t) => t.id == id);
+      if (idx != -1) {
+        _ticketsHoy[idx] = _ticketsHoy[idx].copyWith(anulado: true);
+      }
+      notifyListeners();
+    } catch (e) {
+      _error = 'Error al anular ticket: $e';
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   Future<List<TicketModel>> obtenerTicketsPorRango(DateTime desde, DateTime hasta) {

@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:piscigranja/core/database/app_database.dart';
 import 'package:piscigranja/core/export/export_service.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
@@ -411,6 +413,91 @@ class _TabImpresoraState extends State<_TabImpresora> {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
   );
 
+  Future<void> _exportarBackup() async {
+    try {
+      final nombre =
+          'piscigranja_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.db';
+      final destino = await FilePicker.platform.saveFile(
+        dialogTitle: 'Guardar backup de base de datos',
+        fileName: nombre,
+      );
+      if (destino == null || !mounted) return;
+      await AppDatabase.instance.exportarBackup(destino);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Backup guardado correctamente'),
+            backgroundColor: _C.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al exportar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _restaurarBackup() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restaurar Backup'),
+        content: const Text(
+          'Se reemplazará toda la base de datos actual con el archivo '
+          'seleccionado. Esta acción no se puede deshacer.\n\n'
+          '¿Deseas continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Restaurar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['db'],
+      );
+      if (result == null || result.files.single.path == null || !mounted) return;
+      await AppDatabase.instance.restaurarBackup(result.files.single.path!);
+      if (mounted) context.read<TicketProvider>().cargarTicketsHoy();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Backup restaurado. Los datos han sido actualizados.'),
+            backgroundColor: _C.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al restaurar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _listarImpresoras() async {
     final impresoras = await Printing.listPrinters();
     if (!mounted) return;
@@ -509,6 +596,51 @@ class _TabImpresoraState extends State<_TabImpresora> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 28),
+          Divider(color: Colors.grey.shade200),
+          const SizedBox(height: 12),
+          _ConfigCard(
+            titulo:      'Backup de datos',
+            descripcion: 'Exporta o restaura la base de datos local',
+            icono:       Icons.storage_rounded,
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _exportarBackup,
+                    icon: const Icon(Icons.upload_rounded, size: 22),
+                    label: const Text(
+                      'EXPORTAR BACKUP',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, letterSpacing: 0.5),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _C.primary,
+                      side: const BorderSide(color: _C.primary, width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _restaurarBackup,
+                    icon: const Icon(Icons.download_rounded, size: 22),
+                    label: const Text(
+                      'RESTAURAR BACKUP',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, letterSpacing: 0.5),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _C.orange,
+                      side: BorderSide(color: _C.orange, width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

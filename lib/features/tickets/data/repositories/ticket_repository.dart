@@ -8,10 +8,6 @@ class TicketRepository {
 
   Future<Database> get _db => AppDatabase.instance.database;
 
-  // Genera un ID de ticket único basado en la hora actual
-  int _generarTicketId() =>
-      84000 + (DateTime.now().millisecondsSinceEpoch % 99999);
-
   Future<TicketModel> agregarTicket({
     required int adultos,
     required int ninos,
@@ -19,19 +15,29 @@ class TicketRepository {
     required String metodoPago,
   }) async {
     final db = await _db;
-    final ticketId = _generarTicketId();
     final ahora = DateTime.now();
+    late int id;
+    late int ticketId;
 
-    final map = {
-      'ticket_id': ticketId,
-      'adultos': adultos,
-      'ninos': ninos,
-      'monto': monto,
-      'metodo_pago': metodoPago,
-      'hora': ahora.toIso8601String(),
-    };
-
-    final id = await db.insert('tickets', map);
+    // Transacción atómica: inserta el registro y luego asigna
+    // ticket_id = 84000 + id (basado en autoincrement — nunca colisiona).
+    await db.transaction((txn) async {
+      id = await txn.insert('tickets', {
+        'ticket_id': 0,
+        'adultos': adultos,
+        'ninos': ninos,
+        'monto': monto,
+        'metodo_pago': metodoPago,
+        'hora': ahora.toIso8601String(),
+      });
+      ticketId = 84000 + id;
+      await txn.update(
+        'tickets',
+        {'ticket_id': ticketId},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
 
     return TicketModel(
       id: id,

@@ -140,4 +140,32 @@ class AppDatabase {
     });
   }
 
+  // ─── Backup / Restauración ───────────────────────────────────────────────
+
+  /// Ruta absoluta del archivo de base de datos activo.
+  Future<String> get dbFilePath async {
+    final localAppData = Platform.environment['LOCALAPPDATA']!;
+    return join(localAppData, 'Piscigranja', 'piscigranja.db');
+  }
+
+  /// Copia la BD activa al archivo [destino].
+  /// Llama a [database] primero para garantizar que todos los cambios estén
+  /// escritos en disco (SQLite hace checkpoint al cerrar la WAL).
+  Future<void> exportarBackup(String destino) async {
+    await database; // asegura que la BD esté abierta y actualizada
+    final src = await dbFilePath;
+    await File(src).copy(destino);
+  }
+
+  /// Restaura la BD desde [origen].
+  /// Cierra la conexión actual, reemplaza el archivo y permite que la
+  /// próxima llamada a [database] la vuelva a abrir desde cero.
+  Future<void> restaurarBackup(String origen) async {
+    final dest = await dbFilePath;
+    await _db?.close();
+    _db = null;
+    _initCompleter = null;
+    await File(origen).copy(dest);
+  }
+
 }

@@ -55,6 +55,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (mounted) context.read<TicketProvider>().cargarTicketsHoy();
   }
 
+  Future<void> _irAHistorial() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ConfiguracionScreen(paginaInicial: 2),
+      ),
+    );
+    if (mounted) context.read<TicketProvider>().cargarTicketsHoy();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Leemos providers una sola vez con Selector para reconstruir solo
@@ -71,7 +81,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             Expanded(
-              child: _DashboardBody(onNuevoTicket: _irABoleteria),
+              child: _DashboardBody(
+                onNuevoTicket: _irABoleteria,
+                onVerHistorial: _irAHistorial,
+              ),
             ),
           ],
         ),
@@ -85,7 +98,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 // =============================================================================
 class _DashboardBody extends StatelessWidget {
   final VoidCallback onNuevoTicket;
-  const _DashboardBody({required this.onNuevoTicket});
+  final VoidCallback onVerHistorial;
+  const _DashboardBody({
+    required this.onNuevoTicket,
+    required this.onVerHistorial,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +114,15 @@ class _DashboardBody extends StatelessWidget {
     final totalIngresos = ticketsActivos.fold<double>(0.0, (s, t) => s + t.monto);
 
     // ─── Layout fijo desktop táctil: 2 columnas sin scroll ──────────────────
-    return Padding(
+    return Column(
+      children: [
+        // Banner de error visible si el provider tuvo un fallo
+        if (provider.error != null)
+          _ErrorBanner(
+            message: provider.error!,
+            onDismiss: provider.clearError,
+          ),
+        Expanded(child: Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,6 +164,8 @@ class _DashboardBody extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
+                _PagoDesgloseCard(tickets: ticketsActivos),
+                const SizedBox(height: 14),
                 _PreciosCard(cfg: cfg),
                 const SizedBox(height: 24),
                 _NuevoTicketButton(onTap: onNuevoTicket),
@@ -172,11 +199,13 @@ class _DashboardBody extends StatelessWidget {
               child: _HistorialInline(
                 tickets: tickets,
                 cargando: provider.cargando,
+                onVerHistorial: onVerHistorial,
               ),
             ),
           ),
         ],
-      ),
+      ))),
+      ],
     );
   }
 }
@@ -585,7 +614,12 @@ class _NuevoTicketButton extends StatelessWidget {
 class _HistorialInline extends StatelessWidget {
   final List<TicketModel> tickets;
   final bool cargando;
-  const _HistorialInline({required this.tickets, required this.cargando});
+  final VoidCallback onVerHistorial;
+  const _HistorialInline({
+    required this.tickets,
+    required this.cargando,
+    required this.onVerHistorial,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -631,6 +665,9 @@ class _HistorialInline extends StatelessWidget {
               cargando: cargando,
             ),
           ),
+
+          // Footer: acceso rápido al historial completo
+          _HistorialFooter(onTap: onVerHistorial),
         ],
       ),
     );
@@ -905,5 +942,150 @@ class _TicketItem extends StatelessWidget {
     if (adultos > 0) parts.add('$adultos adulto${adultos > 1 ? 's' : ''}');
     if (ninos > 0) parts.add('$ninos niño${ninos > 1 ? 's' : ''}');
     return parts.join(' + ');
+  }
+}
+
+// =============================================================================
+// _HistorialFooter — botón de acceso al historial completo
+// =============================================================================
+class _HistorialFooter extends StatelessWidget {
+  final VoidCallback onTap;
+  const _HistorialFooter({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        decoration: BoxDecoration(
+          color: _AppColors.primaryLight,
+          border: Border(top: BorderSide(color: Colors.grey.shade200)),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history_rounded, size: 14, color: _AppColors.primary),
+            SizedBox(width: 6),
+            Text(
+              'Ver historial completo',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _AppColors.primary,
+              ),
+            ),
+            SizedBox(width: 4),
+            Icon(Icons.arrow_forward_rounded,
+                size: 14, color: _AppColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _ErrorBanner — muestra errores del provider con botón de cierre
+// =============================================================================
+class _ErrorBanner extends StatelessWidget {
+  final String message;
+  final VoidCallback onDismiss;
+  const _ErrorBanner({required this.message, required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: Colors.red.shade50,
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded,
+              color: Colors.red.shade600, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close_rounded,
+                size: 18, color: Colors.red.shade400),
+            onPressed: onDismiss,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _PagoDesgloseCard — desglose de ingresos por método de pago
+// =============================================================================
+class _PagoDesgloseCard extends StatelessWidget {
+  final List<TicketModel> tickets;
+  const _PagoDesgloseCard({required this.tickets});
+
+  @override
+  Widget build(BuildContext context) {
+    if (tickets.isEmpty) return const SizedBox.shrink();
+
+    // Agrupa montos por método de pago
+    final porMetodo = <String, double>{};
+    for (final t in tickets) {
+      porMetodo[t.metodoPago] = (porMetodo[t.metodoPago] ?? 0) + t.monto;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: _AppColors.primary.withValues(alpha: 0.07),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'DESGLOSE POR PAGO',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: _AppColors.textSoft,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (final entry in porMetodo.entries) ...[
+                Expanded(
+                  child: _TarifaItem(
+                    icon: entry.key == 'efectivo'
+                        ? Icons.money_rounded
+                        : Icons.phone_android_rounded,
+                    label:
+                        entry.key[0].toUpperCase() + entry.key.substring(1),
+                    price: entry.value,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
