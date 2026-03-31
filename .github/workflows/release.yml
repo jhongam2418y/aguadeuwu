@@ -21,7 +21,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.8'   # ✅ Compatible con sdk: ^3.5.0 y flutter: >=3.38.4
+          flutter-version: '3.41.6'   # ✅ Dart 3.10.x — compatible con sqlite3_flutter_libs 0.6.0+eol
           channel: stable
           cache: true
 
@@ -33,31 +33,29 @@ jobs:
         run: flutter pub get
 
       # ── 3. Tests ────────────────────────────────────────────────────────────
-      #   continue-on-error: true mientras no haya tests escritos.
-      #   Cambia a false cuando tengas cobertura real.
       - name: Run tests
         run: flutter test
         continue-on-error: true
 
-      # ── 4. Extraer versión del tag y parchear pubspec.yaml ──────────────────
-      #   CRÍTICO: PackageInfo.fromPlatform() lee la versión compilada en el
-      #   ejecutable desde pubspec.yaml. Si no lo actualizamos, UpdateService
-      #   siempre reportará "1.0.0" y nunca detectará actualizaciones.
+      # ── 4. Parchear pubspec.yaml con la versión del tag ─────────────────────
+      #   CRÍTICO: PackageInfo.fromPlatform() lee la versión compilada desde
+      #   pubspec.yaml. Si no se actualiza, UpdateService siempre ve "1.0.0"
+      #   y el autoupdate nunca detecta nuevas versiones.
       - name: Patch version in pubspec.yaml
         shell: pwsh
         run: |
           $tag = "${{ github.ref_name }}"
-          if ($tag -notmatch '^v(\d+\.\d+\.\d+)$') {
+          if ($tag -notmatch '^v(\d+\.\d+\.\d+)') {
             Write-Error "Tag inválido: '$tag'. Formato esperado: v1.2.3"
             exit 1
           }
           $version = $Matches[1]
-          Write-Host "Version extraída del tag: $version"
+          Write-Host "Versión extraída del tag: $version"
 
-          # Reemplazar la línea 'version:' en pubspec.yaml
           $pubspec = Get-Content "pubspec.yaml" -Raw
           $patched = $pubspec -replace '(?m)^version:.*$', "version: $version+1"
           Set-Content "pubspec.yaml" $patched -NoNewline
+
           Write-Host "pubspec.yaml actualizado:"
           Select-String "^version:" pubspec.yaml
 
@@ -72,18 +70,16 @@ jobs:
       - name: Patch version in installer.iss
         shell: pwsh
         run: |
-          $tag     = "${{ github.ref_name }}"
-          $version = $tag -replace "^v", ""
+          $version = "${{ github.ref_name }}" -replace "^v", ""
 
-          $issPath = "installer.iss"
-          if (-not (Test-Path $issPath)) {
+          if (-not (Test-Path "installer.iss")) {
             Write-Error "installer.iss no encontrado en la raíz del repositorio"
             exit 1
           }
 
-          $content = Get-Content $issPath -Raw
+          $content = Get-Content "installer.iss" -Raw
           $patched = $content -replace '(?m)^(AppVersion\s*=).*$', "`${1}$version"
-          Set-Content $issPath $patched -NoNewline
+          Set-Content "installer.iss" $patched -NoNewline
           Write-Host "installer.iss actualizado con AppVersion=$version"
 
       - name: Build Installer with Inno Setup
@@ -91,7 +87,7 @@ jobs:
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) {
-            Write-Error "ISCC.exe no encontrado. Verifica la instalación de Inno Setup."
+            Write-Error "ISCC.exe no encontrado"
             exit 1
           }
           & $iscc installer.iss
@@ -104,27 +100,24 @@ jobs:
       - name: Verify installer output
         shell: pwsh
         run: |
-          # Ajusta la ruta si tu installer.iss usa OutputDir distinto
           $output = "output\setup_pos.exe"
           if (-not (Test-Path $output)) {
             Write-Error "Instalador no encontrado en: $output"
-            Write-Host "Archivos en output\:"
+            Write-Host "Contenido de output\:"
             Get-ChildItem output -ErrorAction SilentlyContinue
             exit 1
           }
           $sizeMB = [math]::Round((Get-Item $output).Length / 1MB, 2)
-          Write-Host "✅ Instalador generado: $output ($sizeMB MB)"
+          Write-Host "Instalador generado: $output ($sizeMB MB)"
 
       # ── 8. Release notes ────────────────────────────────────────────────────
-      #   Usamos un archivo temporal para evitar problemas con
-      #   caracteres especiales en GITHUB_OUTPUT.
       - name: Generate release notes file
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}" -replace "^v", ""
           $date    = Get-Date -Format "yyyy-MM-dd"
 
-          $notes = @"
+          @"
           ## Piscigranja v$version
 
           Publicado: $date
@@ -135,22 +128,18 @@ jobs:
           3. Sigue el asistente de instalación
 
           ### Notas
-          - La aplicación requiere Windows 10 o superior
+          - Requiere Windows 10 o superior
           - Los datos existentes se conservan al actualizar
-          "@
-
-          # Guardar en archivo para evitar problemas de encoding en GITHUB_OUTPUT
-          $notes | Set-Content "release_notes.md" -Encoding UTF8
-          Write-Host "release_notes.md generado"
+          "@ | Set-Content "release_notes.md" -Encoding UTF8
 
       # ── 9. Crear GitHub Release ─────────────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: output/setup_pos.exe
-          body_path: release_notes.md          # ✅ Más robusto que 'body:'
+          body_path: release_notes.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
-          generate_release_notes: true         # Agrega changelog automático de PRs/commits
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

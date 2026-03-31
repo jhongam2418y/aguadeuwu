@@ -213,7 +213,7 @@ class _TicketTable extends StatelessWidget {
         Expanded(
           child: ListView.separated(
             itemCount: registros.length,
-            separatorBuilder: (_, __) => const Divider(
+            separatorBuilder: (_, _) => const Divider(
               height: 1,
               thickness: 1,
               indent: 18,
