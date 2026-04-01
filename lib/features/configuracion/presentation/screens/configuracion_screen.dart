@@ -13,16 +13,16 @@ import '../../../tickets/presentation/providers/ticket_provider.dart';
 
 // ─── Constantes de diseño ────────────────────────────────────────────────────
 abstract final class _C {
-  static const primary      = Color(0xFF0052CC);
-  static const primaryLight = Color(0xFFE3F0FF);
+  static const primary      = Color(0xFF00695C);
+  static const primaryLight = Color(0xFFE0F2F1);
   static const greenLight   = Color(0xFFE8F5E9);
-  static const green        = Color(0xFF21BA45);
+  static const green        = Color(0xFF2E7D32);
   static const text         = Color(0xFF1A1A1A);
-  static const background   = Color(0xFFF0F7FF);
-  static const headerBg     = Color(0xFFF8FAFD);
-  static const rowAlt       = Color(0xFFFAFBFF);
-  static const borderBlue   = Color(0xFFCCE0FF);
-  static const orange       = Color(0xFFF2711C);
+  static const background   = Color(0xFFF1FAF8);
+  static const headerBg     = Color(0xFFF5FAFA);
+  static const rowAlt       = Color(0xFFF3FAFA);
+  static const borderBlue   = Color(0xFFB2DFDB);
+  static const orange       = Color(0xFFFF8F00);
 }
 
 // Formateadores — instanciados una sola vez

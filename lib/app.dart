@@ -27,7 +27,7 @@ class PiscigranjaApp extends StatelessWidget {
         locale: const Locale('es'),
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF003D99),
+            seedColor: const Color(0xFF00695C),
             brightness: Brightness.light,
           ),
           useMaterial3: true,

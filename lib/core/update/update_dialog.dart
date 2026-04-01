@@ -46,11 +46,11 @@ class _UpdateAvailableDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFE3F0FF),
+              color: const Color(0xFFE0F2F1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.system_update_rounded,
-                color: Color(0xFF0052CC), size: 28),
+                color: Color(0xFF00695C), size: 28),
           ),
           const SizedBox(width: 14),
           const Expanded(
@@ -72,7 +72,7 @@ class _UpdateAvailableDialog extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
                 child: Icon(Icons.arrow_forward_rounded,
-                    size: 18, color: Color(0xFF607DB0)),
+                    size: 18, color: Color(0xFF4E6D68)),
               ),
               _VersionChip(label: 'Nueva', version: info.version),
             ],
@@ -82,9 +82,9 @@ class _UpdateAvailableDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F7FF),
+                color: const Color(0xFFF1FAF8),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFCCE0FF)),
+                border: Border.all(color: const Color(0xFFB2DFDB)),
               ),
               constraints: const BoxConstraints(maxHeight: 140),
               child: SingleChildScrollView(
@@ -99,7 +99,7 @@ class _UpdateAvailableDialog extends StatelessWidget {
           const Text(
             'La actualización se descargará e instalará automáticamente. '
             'La aplicación se cerrará al finalizar.',
-            style: TextStyle(fontSize: 13, color: Color(0xFF607DB0)),
+            style: TextStyle(fontSize: 13, color: Color(0xFF4E6D68)),
           ),
         ],
       ),
@@ -117,7 +117,7 @@ class _UpdateAvailableDialog extends StatelessWidget {
           icon: const Icon(Icons.download_rounded),
           label: const Text('Actualizar ahora'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF0052CC),
+            backgroundColor: const Color(0xFF00695C),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
             textStyle: const TextStyle(
@@ -228,7 +228,7 @@ class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE3F0FF),
+                  color: const Color(0xFFE0F2F1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -237,7 +237,7 @@ class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
                       : Icons.download_rounded,
                   color: _error
                       ? Colors.red.shade600
-                      : const Color(0xFF0052CC),
+                      : const Color(0xFF00695C),
                   size: 36,
                 ),
               ),
@@ -256,7 +256,7 @@ class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
               Text(
                 _statusText,
                 style: const TextStyle(
-                    fontSize: 14, color: Color(0xFF607DB0)),
+                      fontSize: 14, color: Color(0xFF4E6D68)),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -268,9 +268,9 @@ class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
                   child: LinearProgressIndicator(
                     value: progressValue,
                     minHeight: 14,
-                    backgroundColor: const Color(0xFFE3F0FF),
+                    backgroundColor: const Color(0xFFE0F2F1),
                     valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFF0052CC)),
+                        Color(0xFF00695C)),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -286,7 +286,7 @@ class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
                               ? _formatBytes(_received)
                               : '',
                       style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF607DB0)),
+                          fontSize: 12, color: Color(0xFF4E6D68)),
                     ),
                     if (pctLabel.isNotEmpty)
                       Text(
@@ -294,7 +294,7 @@ class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0052CC),
+                          color: Color(0xFF00695C),
                         ),
                       ),
                   ],
@@ -367,15 +367,15 @@ class _VersionChip extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8,
                 color: muted
-                    ? const Color(0xFF607DB0)
-                    : const Color(0xFF0052CC))),
+                    ? const Color(0xFF4E6D68)
+                    : const Color(0xFF00695C))),
         const SizedBox(height: 2),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(
             color: muted
                 ? const Color(0xFFF0F3F8)
-                : const Color(0xFFE3F0FF),
+                : const Color(0xFFE0F2F1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -384,8 +384,8 @@ class _VersionChip extends StatelessWidget {
               fontSize: 15,
               fontWeight: FontWeight.w800,
               color: muted
-                  ? const Color(0xFF607DB0)
-                  : const Color(0xFF0052CC),
+                  ? const Color(0xFF4E6D68)
+                  : const Color(0xFF00695C),
             ),
           ),
         ),

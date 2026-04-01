@@ -344,7 +344,7 @@ class _VerticalDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 1,
-      color: const Color(0xFFCCE0FF),
+      color: const Color(0xFFB2DFDB),
       margin: const EdgeInsets.symmetric(vertical: 16),
     );
   }
@@ -567,7 +567,7 @@ class _ChipPago extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color:
-                  activo ? AppColors.primaryBlue : const Color(0xFFCCE0FF),
+                  activo ? AppColors.primaryBlue : const Color(0xFFB2DFDB),
               width: 2,
             ),
             boxShadow: activo

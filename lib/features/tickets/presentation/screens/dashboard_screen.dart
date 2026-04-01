@@ -11,14 +11,14 @@ import 'boleteria_screen.dart';
 
 // ─── Constantes de diseño centralizadas ──────────────────────────────────────
 abstract final class _AppColors {
-  static const primary = Color(0xFF0052CC);
-  static const primaryDark = Color(0xFF003D99);
-  static const primaryLight = Color(0xFFE3F0FF);
-  static const green = Color(0xFF21BA45);
-  static const greenLight = Color(0xFFE8F5E9);
-  static const text = Color(0xFF1A1A1A);
-  static const textSoft = Color(0xFF607DB0);
-  static const background = Color(0xFFF0F7FF);
+  static const primary     = Color(0xFF00695C);
+  static const primaryDark = Color(0xFF004D40);
+  static const primaryLight = Color(0xFFE0F2F1);
+  static const green       = Color(0xFF2E7D32);
+  static const greenLight  = Color(0xFFE8F5E9);
+  static const text        = Color(0xFF1A1A1A);
+  static const textSoft    = Color(0xFF4E6D68);
+  static const background  = Color(0xFFF1FAF8);
 }
 
 // ─── Formateadores reutilizables (creados una sola vez) ──────────────────────
