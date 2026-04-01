@@ -7,7 +7,7 @@ import 'package:path/path.dart' as p;
 
 // URL de la API de GitHub Releases del repositorio.
 const String _kApiUrl =
-    'https://api.github.com/repos/jhongam2418/aguadeuwu/releases/latest';
+    'https://api.github.com/repos/jhongam2418y/aguadeuwu/releases/latest';
 
 // Nombre exacto del asset .exe dentro del release de GitHub.
 const String _kAssetName = 'PiscigranjaInstaller.exe';
