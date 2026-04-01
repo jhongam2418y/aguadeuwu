@@ -1,80 +1,125 @@
-¡Claro! Aquí tienes un archivo `README.md` que describe tu proyecto "Piscigranja Boletería", incluyendo su propósito, tecnologías y características clave, así como algunas consideraciones de optimización.
+# Piscigranja — Boletería
 
-```markdown README.md
-# Piscigranja Boletería
-
-Este proyecto es una aplicación de punto de venta (POS) desarrollada con Flutter, diseñada para la emisión y gestión de tickets de entrada en una piscigranja. Permite registrar la venta de boletos para adultos y niños, gestionar métodos de pago y generar tickets imprimibles.
-
-## Propósito del Proyecto
-
-El objetivo principal de esta aplicación es optimizar el proceso de venta de entradas en una piscigranja, proporcionando una herramienta rápida y eficiente para:
-*   Registrar el número de visitantes (adultos y niños).
-*   Calcular el monto total a pagar de forma dinámica según el día de la semana.
-*   Ofrecer diversas opciones de método de pago.
-*   Generar una vista previa y permitir la impresión de tickets de forma inmediata.
-*   Mantener un registro local de las ventas y configuraciones.
-
-## Tecnologías Utilizadas
-
-*   **Framework:** [Flutter](https://flutter.dev/) (para desarrollo multiplataforma)
-*   **Lenguaje:** [Dart](https://dart.dev/)
-*   **Base de Datos Local:** [SQLite](https://www.sqlite.org/index.html) (implementado con `sqflite` para persistencia de datos y `sqflite_common_ffi` para soporte en desktop)
-*   **Gestión de Estado:** [Provider](https://pub.dev/packages/provider)
-*   **Generación de PDF:** [pdf](https://pub.dev/packages/pdf)
-*   **Impresión:** [printing](https://pub.dev/packages/printing)
-
-## Características Principales
-
-*   **Emisión de Tickets:**
-    *   Selección de cantidad de adultos y niños.
-    *   Cálculo automático del precio total basado en tarifas configurables por día de la semana.
-    *   Selección de método de pago (Efectivo, Yape, Plin).
-*   **Configuración Dinámica de Precios:** Los precios para adultos y niños pueden variar según el día de la semana, gestionados a través de una tabla de configuración.
-*   **Vista Previa del Ticket:** Antes de imprimir, se muestra una previsualización detallada del ticket.
-*   **Impresión de Tickets:** Generación de tickets en formato PDF y envío a impresoras configuradas.
-*   **Anulación de Tickets:** Posibilidad de anular tickets ya guardados.
-*   **Persistencia de Datos:** Almacenamiento local de tickets y configuraciones en una base de datos SQLite.
-*   **Feedback Visual:** Indicadores de carga y mensajes de éxito/error (usando `SnackBar`) para operaciones asíncronas como guardar e imprimir.
-
-## Estructura del Proyecto (Alto Nivel)
-
-El proyecto sigue una estructura modular, separando las funcionalidades en "features":
-
-```
-.
-├── lib/
-│   ├── core/                  # Componentes base y transversales (ej. base de datos)
-│   │   └── database/
-│   │       └── app_database.dart
-│   ├── features/              # Módulos de funcionalidades específicas
-│   │   ├── configuracion/     # Gestión de configuraciones de precios e impresora
-│   │   │   ├── data/
-│   │   │   ├── domain/
-│   │   │   └── presentation/
-│   │   └── tickets/           # Gestión de tickets de entrada
-│   │       ├── data/
-│   │       ├── domain/
-│   │       └── presentation/
-│   │           └── screens/     # Pantallas de la funcionalidad de tickets
-│   │               ├── boleteria_screen.dart
-│   │               └── ticket_preview_screen.dart
-│   └── main.dart              # Punto de entrada de la aplicación
-└── pubspec.yaml               # Dependencias y metadatos del proyecto
-```
-
-## Consideraciones para Optimización y Despliegue
-
-La aplicación está diseñada para funcionar en plataformas de escritorio (Windows, macOS, Linux) y móviles (Android, iOS). Para despliegues en hardware antiguo o limitado (como una pantalla con Windows, i3 de 2ª generación y 128GB de almacenamiento), se recomienda:
-
-*   **Construir en Modo `Release`:** Siempre compilar y desplegar la aplicación utilizando el comando `flutter build windows --release` (o el correspondiente para otras plataformas). El modo de depuración es significativamente más lento.
-*   **Optimización de UI:** Minimizar las reconstrucciones de widgets y usar `const` para elementos estáticos.
-*   **Manejo Asíncrono:** La implementación de feedback visual para tareas asíncronas ya contribuye a una mejor UX en hardware limitado.
-*   **Generación de PDF:** Mantener los diseños de PDF simples para una generación más rápida.
-*   **SQLite:** La base de datos local `sqflite` es generalmente muy eficiente y no debería ser un cuello de botella.
-*   **Pruebas en Hardware Real:** Es crucial probar el rendimiento de la aplicación directamente en el hardware de destino para identificar cuellos de botella específicos.
+Sistema de punto de venta (POS) para la emisión y gestión de tickets de entrada en una piscigranja. Desarrollado con Flutter para escritorio Windows, con soporte de impresión térmica, exportación de reportes y actualizaciones automáticas.
 
 ---
 
-**Desarrollado por:** [Tu Nombre o Equipo, si aplica]
-**Fecha:** [Fecha actual]
+## Características
+
+### Boletería
+- Registro de visitantes por tipo: adultos y niños
+- Cálculo automático del total según tarifas configuradas por día de la semana
+- Métodos de pago: Efectivo, Yape y Plin
+- Vista previa del ticket antes de confirmar
+- Impresión directa a impresora configurada (PDF vía `printing`)
+- Anulación de tickets emitidos
+
+### Dashboard
+- Resumen del día: cantidad de tickets vendidos e ingresos totales
+- Desglose de ingresos por método de pago
+- Lista de tickets del día con opción de anulación
+- Historial de ventas consultable por rango de fechas
+
+### Configuración
+- Precios de adulto y niño configurables para cada día de la semana (Lunes–Domingo)
+- Selección de impresora predeterminada
+- Exportación del historial en **CSV** o **PDF**
+
+### Actualizaciones automáticas
+- Al iniciar la app, verifica si hay una nueva versión publicada en GitHub Releases
+- Muestra un diálogo con las notas del release y permite descargar e instalar el nuevo instalador sin salir de la app
+
+---
+
+## Stack tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| UI / Framework | Flutter 3 + Material 3 |
+| Lenguaje | Dart |
+| Estado | Provider |
+| Base de datos | SQLite (`sqflite` + `sqflite_common_ffi`) |
+| Impresión / PDF | `pdf` + `printing` |
+| Exportación | `csv`, `file_picker`, `open_filex` |
+| Actualizaciones | GitHub Releases API (`http`, `package_info_plus`) |
+| Ventana desktop | `window_manager` (pantalla completa, sin barra de título) |
+
+---
+
+## Estructura del proyecto
+
 ```
+lib/
+├── main.dart                        # Entrada: inicializa window, SQLite y localización
+├── app.dart                         # MaterialApp + MultiProvider raíz
+├── core/
+│   ├── app_colors.dart
+│   ├── database/                    # AppDatabase (singleton SQLite)
+│   ├── export/                      # ExportService — CSV y PDF
+│   └── update/                      # UpdateService + UpdateDialog (GitHub Releases)
+└── features/
+    ├── configuracion/
+    │   ├── data/                    # ConfigModel, ConfigRepository
+    │   └── presentation/            # ConfigProvider, ConfiguracionScreen
+    └── tickets/
+        ├── data/                    # TicketModel, TicketRepository
+        └── presentation/
+            ├── providers/           # TicketProvider
+            └── screens/
+                ├── dashboard_screen.dart
+                ├── boleteria_screen.dart
+                └── ticket_preview_screen.dart
+```
+
+---
+
+## Instalación y compilación
+
+### Requisitos
+- Flutter SDK `^3.10.0`
+- Windows 10/11 (target principal)
+
+### Clonar y ejecutar en desarrollo
+
+```bash
+git clone https://github.com/jhongam2418/aguadeuwu.git
+cd aguadeuwu
+flutter pub get
+flutter run -d windows
+```
+
+### Compilar instalador para producción
+
+```bash
+flutter build windows --release
+```
+
+Luego compilar el instalador con **Inno Setup** usando el script [`installer.iss`](installer.iss) incluido en el repositorio. El archivo resultante debe llamarse `PiscigranjaInstaller.exe` y adjuntarse al release de GitHub.
+
+---
+
+## Sistema de actualizaciones automáticas
+
+La app consulta `https://api.github.com/repos/jhongam2418/aguadeuwu/releases/latest` al iniciar.
+
+Para que el diálogo de actualización aparezca:
+1. Crear un nuevo release en GitHub con un tag **mayor** que la versión en `pubspec.yaml` (ej. `v1.0.1`)
+2. Adjuntar el instalador con el nombre exacto: **`PiscigranjaInstaller.exe`**
+
+---
+
+## Base de datos
+
+La base de datos SQLite se almacena en:
+
+```
+%LOCALAPPDATA%\Piscigranja\piscigranja.db
+```
+
+Contiene dos tablas: `tickets` (ventas del día) y `config` (precios e impresora).
+
+---
+
+## Licencia
+
+Proyecto privado. Todos los derechos reservados.

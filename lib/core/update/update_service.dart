@@ -10,7 +10,7 @@ const String _kApiUrl =
     'https://api.github.com/repos/jhongam2418/aguadeuwu/releases/latest';
 
 // Nombre exacto del asset .exe dentro del release de GitHub.
-const String _kAssetName = 'PiscigranjaInstaller.exe';
+const String _kAssetName = 'Instalador_Piscigranja.exe';
 
 // =============================================================================
 // UpdateInfo — datos del release obtenido de GitHub
