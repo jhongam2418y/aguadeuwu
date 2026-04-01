@@ -1,7 +1,7 @@
 [Setup]
 AppId={{A1B2C3D4-1234-5678-ABCD-123456789ABC}}
 AppName=Piscigranja
-AppVersion=1.0.1
+AppVersion=1.1.6
 AppPublisher=Piscigranja System
 AppPublisherURL=
 AppSupportURL=
@@ -11,7 +11,7 @@ DefaultDirName={autopf}\Piscigranja
 DefaultGroupName=Piscigranja
 
 OutputDir=output
-OutputBaseFilename=Instalador_Piscigranja
+OutputBaseFilename=PiscigranjaInstaller
 
 Compression=lzma
 SolidCompression=yes
