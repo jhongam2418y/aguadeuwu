@@ -19,6 +19,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   int _adultos = 0;
   int _ninos = 0;
   String _metodoPago = 'efectivo';
+  String? _segundoMetodo;
 
   // ── Helpers de precio (sin lógica de UI, solo cálculos) ──────────────────
 
@@ -35,6 +36,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
         _adultos = 0;
         _ninos = 0;
         _metodoPago = 'efectivo';
+        _segundoMetodo = null;
       });
 
   // ── Navegación a preview ──────────────────────────────────────────────────
@@ -51,7 +53,9 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
     // que un rebuild los mute mientras la pantalla está abierta.
     final adultoSnap = _adultos;
     final ninoSnap = _ninos;
-    final metodoSnap = _metodoPago;
+    final metodoSnap = _segundoMetodo != null
+        ? '$_metodoPago+$_segundoMetodo'
+        : _metodoPago;
 
     await Navigator.push<void>(
       context,
@@ -111,10 +115,15 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
                       precioAdulto: precioAdulto,
                       precioNino: precioNino,
                       metodoPago: _metodoPago,
+                      segundoMetodo: _segundoMetodo,
                       onAdultosChanged: (v) => setState(() => _adultos = v),
                       onNinosChanged: (v) => setState(() => _ninos = v),
-                      onMetodoPagoChanged: (v) =>
-                          setState(() => _metodoPago = v),
+                      onMetodoPagoChanged: (v) => setState(() {
+                        _metodoPago = v;
+                        if (_segundoMetodo == v) _segundoMetodo = null;
+                      }),
+                      onSegundoMetodoChanged: (v) =>
+                          setState(() => _segundoMetodo = v),
                     ),
                   ),
                   // Divisor
@@ -128,7 +137,9 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
                       precioAdulto: precioAdulto,
                       precioNino: precioNino,
                       total: total,
-                      metodoPago: _metodoPago,
+                      metodoPago: _segundoMetodo != null
+                          ? '$_metodoPago+$_segundoMetodo'
+                          : _metodoPago,
                     ),
                   ),
                 ],
@@ -158,9 +169,11 @@ class _LeftPanel extends StatelessWidget {
   final double precioAdulto;
   final double precioNino;
   final String metodoPago;
+  final String? segundoMetodo;
   final ValueChanged<int> onAdultosChanged;
   final ValueChanged<int> onNinosChanged;
   final ValueChanged<String> onMetodoPagoChanged;
+  final ValueChanged<String?> onSegundoMetodoChanged;
 
   const _LeftPanel({
     required this.adultos,
@@ -168,9 +181,11 @@ class _LeftPanel extends StatelessWidget {
     required this.precioAdulto,
     required this.precioNino,
     required this.metodoPago,
+    this.segundoMetodo,
     required this.onAdultosChanged,
     required this.onNinosChanged,
     required this.onMetodoPagoChanged,
+    required this.onSegundoMetodoChanged,
   });
 
   @override
@@ -206,7 +221,9 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 10),
           _SelectorPago(
             seleccionado: metodoPago,
+            segundoMetodo: segundoMetodo,
             onChanged: onMetodoPagoChanged,
+            onSegundoMetodoChanged: onSegundoMetodoChanged,
           ),
           const SizedBox(height: 8),
         ],
@@ -522,9 +539,16 @@ const _metodosPago = [
 
 class _SelectorPago extends StatelessWidget {
   final String seleccionado;
+  final String? segundoMetodo;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String?> onSegundoMetodoChanged;
 
-  const _SelectorPago({required this.seleccionado, required this.onChanged});
+  const _SelectorPago({
+    required this.seleccionado,
+    this.segundoMetodo,
+    required this.onChanged,
+    required this.onSegundoMetodoChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -535,7 +559,15 @@ class _SelectorPago extends StatelessWidget {
           _ChipPago(
             data: _metodosPago[i],
             activo: seleccionado == _metodosPago[i].valor,
+            esSegundo: segundoMetodo == _metodosPago[i].valor,
             onTap: () => onChanged(_metodosPago[i].valor),
+            onTapSegundo: seleccionado == _metodosPago[i].valor
+                ? null
+                : () => onSegundoMetodoChanged(
+                      segundoMetodo == _metodosPago[i].valor
+                          ? null
+                          : _metodosPago[i].valor,
+                    ),
           ),
         ],
       ],
@@ -546,54 +578,96 @@ class _SelectorPago extends StatelessWidget {
 class _ChipPago extends StatelessWidget {
   final _MetodoPagoData data;
   final bool activo;
+  final bool esSegundo;
   final VoidCallback onTap;
+  final VoidCallback? onTapSegundo;
 
   const _ChipPago({
     required this.data,
     required this.activo,
+    this.esSegundo = false,
     required this.onTap,
+    this.onTapSegundo,
   });
 
   @override
   Widget build(BuildContext context) {
+    final chipColor = activo
+        ? AppColors.primaryBlue
+        : esSegundo
+            ? const Color(0xFFFFF3E0)
+            : Colors.white;
+    final borderColor = activo
+        ? AppColors.primaryBlue
+        : esSegundo
+            ? Colors.orange
+            : const Color(0xFFB2DFDB);
+    final iconColor = activo
+        ? Colors.white
+        : esSegundo
+            ? Colors.orange
+            : AppColors.primaryBlue;
+
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          decoration: BoxDecoration(
-            color: activo ? AppColors.primaryBlue : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color:
-                  activo ? AppColors.primaryBlue : const Color(0xFFB2DFDB),
-              width: 2,
+      child: Stack(
+        children: [
+          GestureDetector(
+            onTap: onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              decoration: BoxDecoration(
+                color: chipColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor, width: 2),
+                boxShadow: activo
+                    ? [BoxShadow(color: AppColors.blueOpacity28, blurRadius: 8, offset: const Offset(0, 4))]
+                    : esSegundo
+                        ? [BoxShadow(color: Colors.orange.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4))]
+                        : const [],
+              ),
+              child: Column(
+                children: [
+                  Icon(data.icono, color: iconColor, size: 22),
+                  const SizedBox(height: 5),
+                  Text(data.label,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: iconColor)),
+                ],
+              ),
             ),
-            boxShadow: activo
-                ? [
-                    BoxShadow(
-                        color: AppColors.blueOpacity28,
-                        blurRadius: 8,
-                        offset: const Offset(0, 4))
-                  ]
-                : const [],
           ),
-          child: Column(
-            children: [
-              Icon(data.icono,
-                  color: activo ? Colors.white : AppColors.primaryBlue,
-                  size: 22),
-              const SizedBox(height: 5),
-              Text(data.label,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color:
-                          activo ? Colors.white : AppColors.primaryBlue)),
-            ],
-          ),
-        ),
+          // Botón pequeño en esquina para agregar como 2do método
+          if (onTapSegundo != null)
+            Positioned(
+              top: 5,
+              right: 5,
+              child: GestureDetector(
+                onTap: onTapSegundo,
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: esSegundo ? Colors.orange : Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: esSegundo ? Colors.orange : Colors.grey.shade400,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Icon(
+                    esSegundo ? Icons.check_rounded : Icons.add_rounded,
+                    size: 10,
+                    color: esSegundo ? Colors.white : Colors.grey.shade500,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -817,8 +891,10 @@ class _TicketPreviewCard extends StatelessWidget {
             color: const Color(0xFFF8F9FA),
             child: Column(
               children: [
-                Text('PAGO: ${metodoPago.toUpperCase()}',
-                    style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                Text(
+                  'PAGO: ${metodoPago.split('+').map((p) => '${p[0].toUpperCase()}${p.substring(1)}').join(' + ')}',
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
                 const SizedBox(height: 2),
                 Text('FECHA: $_fechaHora',
                     style: const TextStyle(fontSize: 10, color: Colors.grey)),

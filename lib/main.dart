@@ -14,14 +14,18 @@ Future<void> main() async {
 
     await windowManager.ensureInitialized();
     const options = WindowOptions(
-      fullScreen:       true,
-      backgroundColor:  Colors.transparent,
-      skipTaskbar:      false,
-      titleBarStyle:    TitleBarStyle.hidden,
+
+      size: Size(1366, 768), // tablet
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.hidden,
     );
     await windowManager.waitUntilReadyToShow(options, () async {
       await windowManager.show();
       await windowManager.focus();
+
+      await windowManager.setResizable(false);
     });
   }
   await initializeDateFormatting('es', null);

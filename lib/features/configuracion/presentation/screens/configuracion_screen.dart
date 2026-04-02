@@ -546,6 +546,8 @@ class _TabHistorial extends StatelessWidget {
     final activos       = historial.where((t) => !t.anulado).toList();
     final totalIngresos = activos.fold<double>(0, (s, t) => s + t.monto);
     final totalPersonas = activos.fold<int>(0, (s, t) => s + t.adultos + t.ninos);
+    final totalAdultos  = activos.fold<int>(0, (s, t) => s + t.adultos);
+    final totalNinos    = activos.fold<int>(0, (s, t) => s + t.ninos);
     final totalAnulados = historial.where((t) => t.anulado).length;
     final hayDatos      = historial.isNotEmpty;
 
@@ -566,6 +568,8 @@ class _TabHistorial extends StatelessWidget {
           _ResumenRow(
             totalTickets:  activos.length,
             totalPersonas: totalPersonas,
+            totalAdultos:  totalAdultos,
+            totalNinos:    totalNinos,
             totalIngresos: totalIngresos,
             totalAnulados: totalAnulados,
           ),
@@ -708,12 +712,14 @@ class _HistorialHeader extends StatelessWidget {
 
 // ── Fila de tarjetas resumen ──────────────────────────────────────────────────
 class _ResumenRow extends StatelessWidget {
-  final int totalTickets, totalPersonas, totalAnulados;
+  final int totalTickets, totalPersonas, totalAdultos, totalNinos, totalAnulados;
   final double totalIngresos;
 
   const _ResumenRow({
     required this.totalTickets,
     required this.totalPersonas,
+    required this.totalAdultos,
+    required this.totalNinos,
     required this.totalIngresos,
     required this.totalAnulados,
   });
@@ -736,11 +742,12 @@ class _ResumenRow extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: _SummaryCard(
-              icono:   Icons.people_rounded,
-              label:   'TOTAL PERSONAS',
-              valor:   '$totalPersonas',
-              color:   _C.primary,
-              bgColor: _C.primaryLight,
+              icono:     Icons.people_rounded,
+              label:     'TOTAL PERSONAS',
+              valor:     '$totalPersonas',
+              subtitulo: '$totalAdultos adultos · $totalNinos niños',
+              color:     _C.primary,
+              bgColor:   _C.primaryLight,
             ),
           ),
           const SizedBox(width: 14),
@@ -1129,12 +1136,14 @@ class _FechaChip extends StatelessWidget {
 class _SummaryCard extends StatelessWidget {
   final IconData icono;
   final String label, valor;
+  final String? subtitulo;
   final Color color, bgColor;
 
   const _SummaryCard({
     required this.icono,
     required this.label,
     required this.valor,
+    this.subtitulo,
     required this.color,
     required this.bgColor,
   });
@@ -1173,6 +1182,17 @@ class _SummaryCard extends StatelessWidget {
                 Text(valor,
                     style: TextStyle(
                         fontSize: 22, fontWeight: FontWeight.w900, color: color)),
+                if (subtitulo != null) ...[  
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitulo!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: color.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
