@@ -19,16 +19,30 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   int _adultos = 0;
   int _ninos = 0;
   final _metodos = <String>['efectivo'];
+  // monto asignado al primer método cuando hay pago dividido
+  double _montoPrincipal = 0.0;
 
-  String get _metodoSnap => _metodos.join('+');
+  String _buildMetodoSnap(double total) {
+    if (_metodos.length == 2) {
+      final m1 = _montoPrincipal.clamp(0.0, total);
+      final m2 = (total - m1).clamp(0.0, total);
+      return '${_metodos[0]}:${m1.toStringAsFixed(2)}'
+             '+${_metodos[1]}:${m2.toStringAsFixed(2)}';
+    }
+    return _metodos.join('+');
+  }
 
-  void _toggleMetodo(String valor) {
+  void _toggleMetodo(String valor, double total) {
     setState(() {
       final idx = _metodos.indexOf(valor);
       if (idx >= 0) {
-        if (_metodos.length > 1) _metodos.removeAt(idx);
+        if (_metodos.length > 1) {
+          _metodos.removeAt(idx);
+          _montoPrincipal = 0.0;
+        }
       } else if (_metodos.length < 2) {
         _metodos.add(valor);
+        _montoPrincipal = total; // principal lleva todo por defecto
       }
     });
   }
@@ -47,6 +61,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   void _resetear() => setState(() {
         _adultos = 0;
         _ninos = 0;
+        _montoPrincipal = 0.0;
         _metodos
           ..clear()
           ..add('efectivo');
@@ -66,7 +81,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
     // que un rebuild los mute mientras la pantalla está abierta.
     final adultoSnap = _adultos;
     final ninoSnap = _ninos;
-    final metodoSnap = _metodoSnap;
+    final metodoSnap = _buildMetodoSnap(total);
 
     await Navigator.push<void>(
       context,
@@ -125,10 +140,14 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
                       ninos: _ninos,
                       precioAdulto: precioAdulto,
                       precioNino: precioNino,
+                      total: total,
                       metodos: _metodos,
+                      montoPrincipal: _montoPrincipal,
                       onAdultosChanged: (v) => setState(() => _adultos = v),
                       onNinosChanged: (v) => setState(() => _ninos = v),
-                      onToggleMetodo: _toggleMetodo,
+                      onToggleMetodo: (v) => _toggleMetodo(v, total),
+                      onMontoPrincipalChanged: (v) =>
+                          setState(() => _montoPrincipal = v),
                     ),
                   ),
                   // Divisor
@@ -142,7 +161,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
                       precioAdulto: precioAdulto,
                       precioNino: precioNino,
                       total: total,
-                      metodoPago: _metodoSnap,
+                      metodoPago: _buildMetodoSnap(total),
                     ),
                   ),
                 ],
@@ -171,20 +190,26 @@ class _LeftPanel extends StatelessWidget {
   final int ninos;
   final double precioAdulto;
   final double precioNino;
+  final double total;
   final List<String> metodos;
+  final double montoPrincipal;
   final ValueChanged<int> onAdultosChanged;
   final ValueChanged<int> onNinosChanged;
   final ValueChanged<String> onToggleMetodo;
+  final ValueChanged<double> onMontoPrincipalChanged;
 
   const _LeftPanel({
     required this.adultos,
     required this.ninos,
     required this.precioAdulto,
     required this.precioNino,
+    required this.total,
     required this.metodos,
+    required this.montoPrincipal,
     required this.onAdultosChanged,
     required this.onNinosChanged,
     required this.onToggleMetodo,
+    required this.onMontoPrincipalChanged,
   });
 
   @override
@@ -218,12 +243,21 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 16),
           const _SectionLabel(texto: 'MÉTODO DE PAGO'),
           const SizedBox(height: 10),
-          Expanded(
+          SizedBox(
+            height: 90,
             child: _SelectorPago(
               metodos: metodos,
               onToggle: onToggleMetodo,
             ),
           ),
+          if (metodos.length == 2) ...[            const SizedBox(height: 10),
+            _SplitPagoPanel(
+              metodos: metodos,
+              montoPrincipal: montoPrincipal,
+              total: total,
+              onMontoPrincipalChanged: onMontoPrincipalChanged,
+            ),
+          ],
           const SizedBox(height: 8),
         ],
       ),
@@ -527,13 +561,14 @@ class _MetodoPagoData {
   final String valor;
   final String label;
   final IconData icono;
-  const _MetodoPagoData(this.valor, this.label, this.icono);
+  final String? imagePath;
+  const _MetodoPagoData(this.valor, this.label, this.icono, {this.imagePath});
 }
 
 const _metodosPago = [
   _MetodoPagoData('efectivo', 'Efectivo', Icons.payments_rounded),
-  _MetodoPagoData('yape', 'Yape', Icons.phone_android_rounded),
-  _MetodoPagoData('plin', 'Plin', Icons.mobile_friendly_rounded),
+  _MetodoPagoData('yape', 'Yape', Icons.phone_android_rounded, imagePath: 'assets/images/yape.png'),
+  _MetodoPagoData('plin', 'Plin', Icons.mobile_friendly_rounded, imagePath: 'assets/images/plin.png'),
 ];
 
 class _SelectorPago extends StatelessWidget {
@@ -639,7 +674,10 @@ class _ChipPago extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(data.icono, color: iconColor, size: 32),
+                    if (data.imagePath != null)
+                      Image.asset(data.imagePath!, height: 32)
+                    else
+                      Icon(data.icono, color: iconColor, size: 32),
                     const SizedBox(height: 6),
                     Text(
                       data.label,
@@ -701,6 +739,248 @@ class _ChipPago extends StatelessWidget {
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// _SplitPagoPanel — inputs de monto para pago dividido
+// =============================================================================
+class _SplitPagoPanel extends StatefulWidget {
+  final List<String> metodos;
+  final double montoPrincipal;
+  final double total;
+  final ValueChanged<double> onMontoPrincipalChanged;
+
+  const _SplitPagoPanel({
+    required this.metodos,
+    required this.montoPrincipal,
+    required this.total,
+    required this.onMontoPrincipalChanged,
+  });
+
+  @override
+  State<_SplitPagoPanel> createState() => _SplitPagoPanelState();
+}
+
+class _SplitPagoPanelState extends State<_SplitPagoPanel> {
+  late final TextEditingController _ctrl0;
+  late final TextEditingController _ctrl1;
+  bool _editando0 = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl0 = TextEditingController(
+        text: widget.montoPrincipal.toStringAsFixed(2));
+    _ctrl1 = TextEditingController(
+        text: (widget.total - widget.montoPrincipal).toStringAsFixed(2));
+  }
+
+  @override
+  void didUpdateWidget(_SplitPagoPanel old) {
+    super.didUpdateWidget(old);
+    // Sincronizar cuando cambia el total externamente (cambio de personas)
+    if (old.total != widget.total || old.metodos != widget.metodos) {
+      final m1 = widget.montoPrincipal.clamp(0.0, widget.total);
+      final m2 = (widget.total - m1).clamp(0.0, widget.total);
+      if (!_editando0) {
+        _ctrl0.text = m1.toStringAsFixed(2);
+        _ctrl1.text = m2.toStringAsFixed(2);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl0.dispose();
+    _ctrl1.dispose();
+    super.dispose();
+  }
+
+  String _label(String valor) {
+    final found = _metodosPago.where((m) => m.valor == valor).firstOrNull;
+    return found?.label ?? (valor[0].toUpperCase() + valor.substring(1));
+  }
+
+  String? _imagen(String valor) {
+    final found = _metodosPago.where((m) => m.valor == valor).firstOrNull;
+    return found?.imagePath;
+  }
+
+  static const _paso = 0.50;
+
+  /// Ajusta el monto del campo 0 en [delta] (puede ser +0.50 o -0.50)
+  /// y sincroniza el campo 1.
+  void _ajustar(double delta) {
+    final nuevo = (widget.montoPrincipal + delta).clamp(0.0, widget.total);
+    // Redondear a múltiplos de 0.50 para evitar acumulación de decimales
+    final redondeado = (nuevo / _paso).round() * _paso;
+    final clamped = redondeado.clamp(0.0, widget.total);
+    widget.onMontoPrincipalChanged(clamped);
+    _ctrl0.text = clamped.toStringAsFixed(2);
+    _ctrl1.text = (widget.total - clamped).toStringAsFixed(2);
+  }
+
+  void _onChanged0(String raw) {
+    final v = double.tryParse(raw) ?? 0.0;
+    final clamped = v.clamp(0.0, widget.total);
+    widget.onMontoPrincipalChanged(clamped);
+    _ctrl1.text = (widget.total - clamped).toStringAsFixed(2);
+  }
+
+  void _onChanged1(String raw) {
+    final v = double.tryParse(raw) ?? 0.0;
+    final clamped = v.clamp(0.0, widget.total);
+    final newPrincipal = (widget.total - clamped).clamp(0.0, widget.total);
+    widget.onMontoPrincipalChanged(newPrincipal);
+    _ctrl0.text = newPrincipal.toStringAsFixed(2);
+  }
+
+  Widget _fieldCard(String metodoValor, TextEditingController ctrl,
+      ValueChanged<String> onChanged, bool isPrimary) {
+    final img = _imagen(metodoValor);
+    final lbl = _label(metodoValor);
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFB2DFDB), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Encabezado: logo + nombre
+            Row(
+              children: [
+                if (img != null)
+                  Image.asset(img, height: 18)
+                else
+                  const Icon(Icons.payments_rounded,
+                      size: 18, color: Color(0xFF00695C)),
+                const SizedBox(width: 6),
+                Text(lbl,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF00695C))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Monto + flechas (solo en el campo principal)
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: ctrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    onTap: () => setState(() => _editando0 = isPrimary),
+                    onChanged: onChanged,
+                    onSubmitted: (_) => setState(() => _editando0 = false),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w800),
+                    decoration: const InputDecoration(
+                      prefixText: 'S/ ',
+                      prefixStyle: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A1A)),
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                if (isPrimary) ...[
+                  const SizedBox(width: 6),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _ArrowBtn(
+                        icon: Icons.keyboard_arrow_up_rounded,
+                        onTap: () => _ajustar(_paso),
+                        enabled: widget.montoPrincipal < widget.total,
+                      ),
+                      const SizedBox(height: 2),
+                      _ArrowBtn(
+                        icon: Icons.keyboard_arrow_down_rounded,
+                        onTap: () => _ajustar(-_paso),
+                        enabled: widget.montoPrincipal > 0,
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.metodos.length < 2) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'DIVIDIR PAGO',
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF4E6D68),
+              letterSpacing: 0.8),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _fieldCard(widget.metodos[0], _ctrl0, _onChanged0, true),
+            const SizedBox(width: 10),
+            _fieldCard(widget.metodos[1], _ctrl1, _onChanged1, false),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// Botón de flecha pequeño para el split de pago
+class _ArrowBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool enabled;
+  const _ArrowBtn(
+      {required this.icon, required this.onTap, required this.enabled});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 44,
+        height: 38,
+        decoration: BoxDecoration(
+          color: enabled
+              ? const Color(0xFF00695C).withValues(alpha: 0.10)
+              : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: enabled
+                ? const Color(0xFF00695C).withValues(alpha: 0.25)
+                : Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 26,
+          color: enabled ? const Color(0xFF00695C) : Colors.grey.shade400,
         ),
       ),
     );

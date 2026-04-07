@@ -26,6 +26,26 @@ final _fmtHora = DateFormat('HH:mm');
 final _fmtDia = DateFormat('EEEE', 'es');
 final _fmtFecha = DateFormat("EEEE d 'de' MMMM", 'es');
 
+// Parsea el campo metodoPago, que puede venir en tres formas:
+//   "efectivo"             → {efectivo: monto_total}
+//   "efectivo+yape"        → {efectivo: monto_total, yape: monto_total} (antiguo)
+//   "efectivo:15.00+yape:5.00" → {efectivo: 15.0, yape: 5.0}
+Map<String, double?> _parsearMetodoPago(String metodoPago) {
+  final result = <String, double?>{};
+  for (final parte in metodoPago.split('+')) {
+    final split = parte.split(':');
+    final metodo = split[0].trim();
+    final monto = split.length > 1 ? double.tryParse(split[1].trim()) : null;
+    result[metodo] = monto;
+  }
+  return result;
+}
+
+String _labelMetodo(String valor) {
+  if (valor.isEmpty) return valor;
+  return valor[0].toUpperCase() + valor.substring(1);
+}
+
 // =============================================================================
 // DashboardScreen
 // =============================================================================
@@ -800,7 +820,8 @@ class _TicketItem extends StatelessWidget {
     final anulado = ticket.anulado;
     final hora = _fmtHora.format(ticket.hora);
     final totalPax = ticket.adultos + ticket.ninos;
-    final esEfectivo = ticket.metodoPago == 'efectivo';
+    final metodos = _parsearMetodoPago(ticket.metodoPago);
+    final esEfectivo = metodos.keys.length == 1 && metodos.keys.first == 'efectivo';
 
     // Colores derivados del estado — calculados una vez
     final idBgColor = anulado ? Colors.red.shade50 : _AppColors.primaryLight;
@@ -886,8 +907,7 @@ class _TicketItem extends StatelessWidget {
                         ),
                         const SizedBox(width: 3),
                         Text(
-                          '${ticket.metodoPago[0].toUpperCase()}'
-                          '${ticket.metodoPago.substring(1)}',
+                          metodos.keys.map(_labelMetodo).join(' + '),
                           style: TextStyle(
                               fontSize: 11, color: Colors.grey.shade500),
                         ),
@@ -1036,10 +1056,20 @@ class _PagoDesgloseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (tickets.isEmpty) return const SizedBox.shrink();
 
-    // Agrupa montos por método de pago
+    // Agrupa montos por método de pago (parsea formato con montos divididos)
     final porMetodo = <String, double>{};
     for (final t in tickets) {
-      porMetodo[t.metodoPago] = (porMetodo[t.metodoPago] ?? 0) + t.monto;
+      final metodos = _parsearMetodoPago(t.metodoPago);
+      if (metodos.values.every((v) => v != null)) {
+        // Formato nuevo con montos explícitos
+        for (final e in metodos.entries) {
+          porMetodo[e.key] = (porMetodo[e.key] ?? 0) + e.value!;
+        }
+      } else {
+        // Formato antiguo sin montos: acumular monto total al primer método
+        final keys = metodos.keys.toList();
+        porMetodo[keys[0]] = (porMetodo[keys[0]] ?? 0) + t.monto;
+      }
     }
 
     return Container(
@@ -1076,8 +1106,7 @@ class _PagoDesgloseCard extends StatelessWidget {
                     icon: entry.key == 'efectivo'
                         ? Icons.money_rounded
                         : Icons.phone_android_rounded,
-                    label:
-                        entry.key[0].toUpperCase() + entry.key.substring(1),
+                    label: _labelMetodo(entry.key),
                     price: entry.value,
                   ),
                 ),
