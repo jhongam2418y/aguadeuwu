@@ -244,7 +244,7 @@ class _LeftPanel extends StatelessWidget {
           const _SectionLabel(texto: 'MÉTODO DE PAGO'),
           const SizedBox(height: 10),
           SizedBox(
-            height: 90,
+            height: 110,
             child: _SelectorPago(
               metodos: metodos,
               onToggle: onToggleMetodo,
@@ -394,7 +394,7 @@ class _VerticalDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 1,
-      color: const Color(0xFFB2DFDB),
+      color: AppColors.tealBorderLight,
       margin: const EdgeInsets.symmetric(vertical: 16),
     );
   }
@@ -617,7 +617,7 @@ class _ChipPago extends StatelessWidget {
   static const _azul         = AppColors.primaryBlue;
   static const _naranja      = Color(0xFFFF8F00);
   static const _fondoNaranja = Color(0xFFFFF3E0);
-  static const _bordeVerde   = Color(0xFFB2DFDB);
+  static const _bordeVerde   = AppColors.tealBorderLight;
 
   @override
   Widget build(BuildContext context) {
@@ -675,7 +675,12 @@ class _ChipPago extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (data.imagePath != null)
-                      Image.asset(data.imagePath!, height: 32)
+                      Image.asset(
+                        data.imagePath!,
+                        height: 32,
+                        color: bloqueado ? Colors.grey.shade400 : null,
+                        colorBlendMode: bloqueado ? BlendMode.srcIn : null,
+                      )
                     else
                       Icon(data.icono, color: iconColor, size: 32),
                     const SizedBox(height: 6),
@@ -849,7 +854,7 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFB2DFDB), width: 1.5),
+          border: Border.all(color: AppColors.tealBorderLight, width: 1.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -862,13 +867,13 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
                   Image.asset(img, height: 18)
                 else
                   const Icon(Icons.payments_rounded,
-                      size: 18, color: Color(0xFF00695C)),
+                      size: 18, color: AppColors.primaryBlue),
                 const SizedBox(width: 6),
                 Text(lbl,
                     style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF00695C))),
+                        color: AppColors.primaryBlue)),
               ],
             ),
             const SizedBox(height: 8),
@@ -889,32 +894,14 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
                       prefixText: 'S/ ',
                       prefixStyle: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A1A)),
+                          color: AppColors.text),
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
                       border: InputBorder.none,
                     ),
                   ),
                 ),
-                if (isPrimary) ...[
-                  const SizedBox(width: 6),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _ArrowBtn(
-                        icon: Icons.keyboard_arrow_up_rounded,
-                        onTap: () => _ajustar(_paso),
-                        enabled: widget.montoPrincipal < widget.total,
-                      ),
-                      const SizedBox(height: 2),
-                      _ArrowBtn(
-                        icon: Icons.keyboard_arrow_down_rounded,
-                        onTap: () => _ajustar(-_paso),
-                        enabled: widget.montoPrincipal > 0,
-                      ),
-                    ],
-                  ),
-                ],
+
               ],
             ),
           ],
@@ -934,14 +921,33 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
           style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF4E6D68),
+              color: AppColors.textSoft,
               letterSpacing: 0.8),
         ),
         const SizedBox(height: 8),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _fieldCard(widget.metodos[0], _ctrl0, _onChanged0, true),
-            const SizedBox(width: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ArrowBtn(
+                    icon: Icons.keyboard_arrow_up_rounded,
+                    onTap: () => _ajustar(_paso),
+                    enabled: widget.montoPrincipal < widget.total,
+                  ),
+                  const SizedBox(height: 2),
+                  _ArrowBtn(
+                    icon: Icons.keyboard_arrow_down_rounded,
+                    onTap: () => _ajustar(-_paso),
+                    enabled: widget.montoPrincipal > 0,
+                  ),
+                ],
+              ),
+            ),
             _fieldCard(widget.metodos[1], _ctrl1, _onChanged1, false),
           ],
         ),
@@ -967,12 +973,12 @@ class _ArrowBtn extends StatelessWidget {
         height: 38,
         decoration: BoxDecoration(
           color: enabled
-              ? const Color(0xFF00695C).withValues(alpha: 0.10)
+              ? AppColors.blueOpacity10
               : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: enabled
-                ? const Color(0xFF00695C).withValues(alpha: 0.25)
+                ? AppColors.primaryBlue.withValues(alpha: 0.25)
                 : Colors.grey.shade300,
             width: 1,
           ),
@@ -980,7 +986,7 @@ class _ArrowBtn extends StatelessWidget {
         child: Icon(
           icon,
           size: 26,
-          color: enabled ? const Color(0xFF00695C) : Colors.grey.shade400,
+          color: enabled ? AppColors.primaryBlue : Colors.grey.shade400,
         ),
       ),
     );
@@ -1244,7 +1250,7 @@ class _TicketHeader extends StatelessWidget {
       ),
       child: const Column(
         children: [
-          Text('PISCIGRANJA',
+          Text('RESUMEN DE TICKET',
               style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,

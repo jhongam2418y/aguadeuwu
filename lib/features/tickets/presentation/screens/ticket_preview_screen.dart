@@ -5,17 +5,19 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/app_colors.dart';
 import '../../../configuracion/presentation/providers/config_provider.dart';
+import '../../data/models/ticket_model.dart';
 import '../providers/ticket_provider.dart';
 
-// ─── Constantes de diseño ────────────────────────────────────────────────────
+// ─── Constantes de diseño — aliases a AppColors (fuente única de verdad) ─────
 abstract final class _C {
-  static const primary     = Color(0xFF00695C);
-  static const primaryDark = Color(0xFF004D40);
-  static const blueBorder  = Color(0xFF80CBC4);
-  static const text        = Color(0xFF1A1A1A);
-  static const background  = Color(0xFFF1FAF8);
-  static const panelBg     = Color(0xFFD0EEEA);
+  static const primary     = AppColors.primaryBlue;
+  static const primaryDark = AppColors.darkBlue;
+  static const blueBorder  = AppColors.blueBorder;
+  static const text        = AppColors.text;
+  static const background  = AppColors.lightBlueBackground;
+  static const panelBg     = AppColors.panelBg;
 }
 
 // Formateadores — instanciados una sola vez
@@ -85,7 +87,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
   Future<pw.Document> _buildPdf() async {
     final pdf   = pw.Document();
     const mmPt  = PdfPageFormat.mm;
-    final pago  = '${_metodoPago[0].toUpperCase()}${_metodoPago.substring(1)}';
+    final partesPago = _metodoPago.split('+');
 
     // Helper interno al método — no necesita ser un getter del estado
     pw.Widget pdfRow(String label, String value,
@@ -139,7 +141,11 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pdfRow('TOTAL:', 'S/ ${_total.toStringAsFixed(2)}',
                 bold: true, fontSize: 16),
             pw.SizedBox(height: 4),
-            pw.Text('Pago: $pago', style: const pw.TextStyle(fontSize: 10)),
+            pdfRow('Pago:', TicketModel.formatearParte(partesPago[0])),
+            if (partesPago.length > 1) ...[
+              pw.SizedBox(height: 2),
+              pdfRow('', TicketModel.formatearParte(partesPago[1])),
+            ],
             pw.SizedBox(height: 8),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 6),
@@ -513,8 +519,8 @@ class _PrinterInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconColor  = conectado ? Colors.green.shade600 : Colors.orange;
     final iconBgColor = conectado
-        ? const Color(0xFFE8F5E9)
-        : const Color(0xFFFFF8E1);
+        ? AppColors.greenLight
+        : AppColors.warmYellowBg;
     final statusText = conectado ? 'Conectado y listo' : 'No configurada';
 
     return Container(
@@ -659,10 +665,20 @@ class _TicketCard extends StatelessWidget {
                     const SizedBox(height: 7),
                     const _TicketRow(label: 'TIPO:', value: 'ENTRADA GENERAL'),
                     const SizedBox(height: 7),
-                    _TicketRow(
-                      label: 'PAGO:',
-                      value: '${metodoPago[0].toUpperCase()}${metodoPago.substring(1)}',
-                    ),
+                    Builder(builder: (_) {
+                      final partes = metodoPago.split('+');
+                      return Column(
+                        children: [
+                          for (int i = 0; i < partes.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 7),
+                            _TicketRow(
+                              label: i == 0 ? 'PAGO:' : '',
+                              value: TicketModel.formatearParte(partes[i]),
+                            ),
+                          ],
+                        ],
+                      );
+                    }),
                   ],
                 ),
               ),

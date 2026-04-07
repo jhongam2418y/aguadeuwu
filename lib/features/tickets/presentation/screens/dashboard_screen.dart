@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/app_colors.dart';
 import '../../../../core/update/update_dialog.dart';
 import '../../../configuracion/presentation/providers/config_provider.dart';
 import '../../../configuracion/presentation/screens/configuracion_screen.dart';
@@ -10,15 +11,16 @@ import '../providers/ticket_provider.dart';
 import 'boleteria_screen.dart';
 
 // ─── Constantes de diseño centralizadas ──────────────────────────────────────
+// ─── Aliases a AppColors (fuente única de verdad) ────────────────────────────
 abstract final class _AppColors {
-  static const primary     = Color(0xFF00695C);
-  static const primaryDark = Color(0xFF004D40);
-  static const primaryLight = Color(0xFFE0F2F1);
-  static const green       = Color(0xFF2E7D32);
-  static const greenLight  = Color(0xFFE8F5E9);
-  static const text        = Color(0xFF1A1A1A);
-  static const textSoft    = Color(0xFF4E6D68);
-  static const background  = Color(0xFFF1FAF8);
+  static const primary      = AppColors.primaryBlue;
+  static const primaryDark  = AppColors.darkBlue;
+  static const primaryLight = AppColors.primaryLight;
+  static const green        = AppColors.green;
+  static const greenLight   = AppColors.greenLight;
+  static const text         = AppColors.text;
+  static const textSoft     = AppColors.textSoft;
+  static const background   = AppColors.lightBlueBackground;
 }
 
 // ─── Formateadores reutilizables (creados una sola vez) ──────────────────────
@@ -26,20 +28,7 @@ final _fmtHora = DateFormat('HH:mm');
 final _fmtDia = DateFormat('EEEE', 'es');
 final _fmtFecha = DateFormat("EEEE d 'de' MMMM", 'es');
 
-// Parsea el campo metodoPago, que puede venir en tres formas:
-//   "efectivo"             → {efectivo: monto_total}
-//   "efectivo+yape"        → {efectivo: monto_total, yape: monto_total} (antiguo)
-//   "efectivo:15.00+yape:5.00" → {efectivo: 15.0, yape: 5.0}
-Map<String, double?> _parsearMetodoPago(String metodoPago) {
-  final result = <String, double?>{};
-  for (final parte in metodoPago.split('+')) {
-    final split = parte.split(':');
-    final metodo = split[0].trim();
-    final monto = split.length > 1 ? double.tryParse(split[1].trim()) : null;
-    result[metodo] = monto;
-  }
-  return result;
-}
+// Parsea el campo metodoPago — lógica centralizada en TicketModel.parsearMetodoPago
 
 String _labelMetodo(String valor) {
   if (valor.isEmpty) return valor;
@@ -820,7 +809,7 @@ class _TicketItem extends StatelessWidget {
     final anulado = ticket.anulado;
     final hora = _fmtHora.format(ticket.hora);
     final totalPax = ticket.adultos + ticket.ninos;
-    final metodos = _parsearMetodoPago(ticket.metodoPago);
+    final metodos = TicketModel.parsearMetodoPago(ticket.metodoPago);
     final esEfectivo = metodos.keys.length == 1 && metodos.keys.first == 'efectivo';
 
     // Colores derivados del estado — calculados una vez
@@ -836,7 +825,7 @@ class _TicketItem extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: anulado ? const Color(0xFFFFF0F0) : Colors.white,
+          color: anulado ? AppColors.errorLight : Colors.white,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -1059,7 +1048,7 @@ class _PagoDesgloseCard extends StatelessWidget {
     // Agrupa montos por método de pago (parsea formato con montos divididos)
     final porMetodo = <String, double>{};
     for (final t in tickets) {
-      final metodos = _parsearMetodoPago(t.metodoPago);
+      final metodos = TicketModel.parsearMetodoPago(t.metodoPago);
       if (metodos.values.every((v) => v != null)) {
         // Formato nuevo con montos explícitos
         for (final e in metodos.entries) {
