@@ -619,25 +619,48 @@ class _ChipPago extends StatelessWidget {
   static const _fondoNaranja = Color(0xFFFFF3E0);
   static const _bordeVerde   = AppColors.tealBorderLight;
 
+  static Color? _fondoMetodo(String valor) {
+    if (valor == 'yape') return const Color(0xFF7C3AED).withValues(alpha: 0.10);
+    if (valor == 'plin') return const Color(0xFF0891B2).withValues(alpha: 0.10);
+    return null;
+  }
+
+  static Color? _bordeMetodo(String valor) {
+    if (valor == 'yape') return const Color(0xFF7C3AED).withValues(alpha: 0.30);
+    if (valor == 'plin') return const Color(0xFF0891B2).withValues(alpha: 0.30);
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final esPrimario  = orden == 0;
     final esAdicional = orden == 1;
     final activo      = esPrimario || esAdicional;
 
-    final chipColor   = esPrimario  ? _azul
+    // Color principal sólido según método
+    final colorPrincipalMetodo = data.valor == 'yape'
+        ? const Color(0xFF7C3AED)
+        : data.valor == 'plin'
+            ? const Color(0xFF0891B2)
+            : data.valor == 'efectivo'
+                ? const Color(0xFF1B6B5A)
+                : _azul;
+
+    final fondoBase   = _fondoMetodo(data.valor);
+    final chipColor   = esPrimario  ? colorPrincipalMetodo
                       : esAdicional ? _fondoNaranja
                       : bloqueado   ? const Color(0xFFF5F5F5)
-                      : Colors.white;
-    final borderColor = esPrimario  ? _azul
+                      : fondoBase ?? Colors.white;
+    final borderColor = esPrimario  ? colorPrincipalMetodo
                       : esAdicional ? _naranja
                       : bloqueado   ? Colors.grey.shade300
-                      : _bordeVerde;
+                      : _bordeMetodo(data.valor) ?? _bordeVerde;
     final iconColor   = esPrimario  ? Colors.white
                       : esAdicional ? _naranja
                       : bloqueado   ? Colors.grey.shade400
                       : _azul;
-    final badgeColor  = esPrimario  ? _azul : _naranja;
+    final badgeColor  = esPrimario  ? colorPrincipalMetodo : _naranja;
+    final shadowColor = esPrimario  ? colorPrincipalMetodo.withValues(alpha: 0.35) : _naranja.withValues(alpha: 0.2);
     final hint        = esPrimario  ? 'Principal'
                       : esAdicional ? 'Adicional'
                       : bloqueado   ? 'Quita uno'
@@ -653,17 +676,12 @@ class _ChipPago extends StatelessWidget {
             color: chipColor,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: borderColor, width: 2),
-            boxShadow: esPrimario
+            boxShadow: (esPrimario || esAdicional)
                 ? [BoxShadow(
-                    color: AppColors.blueOpacity28,
+                    color: shadowColor,
                     blurRadius: 8,
                     offset: const Offset(0, 4))]
-                : esAdicional
-                    ? [BoxShadow(
-                        color: _naranja.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4))]
-                    : const [],
+                : const [],
           ),
           child: Stack(
             clipBehavior: Clip.none,
@@ -676,7 +694,11 @@ class _ChipPago extends StatelessWidget {
                   children: [
                     if (data.imagePath != null)
                       Image.asset(
-                        data.imagePath!,
+                        (esPrimario && data.valor == 'yape')
+                            ? 'assets/images/yapeBlanco.png'
+                            : (esPrimario && data.valor == 'plin')
+                                ? 'assets/images/plinBlanco.png'
+                                : data.imagePath!,
                         height: 32,
                         color: bloqueado ? Colors.grey.shade400 : null,
                         colorBlendMode: bloqueado ? BlendMode.srcIn : null,
@@ -815,18 +837,30 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
     return found?.imagePath;
   }
 
-  static const _paso = 0.50;
+  static const _pasoPrincipal = 1.00;
+  static const _pasoSecundario = 0.50;
 
   /// Ajusta el monto del campo 0 en [delta] (puede ser +0.50 o -0.50)
   /// y sincroniza el campo 1.
   void _ajustar(double delta) {
     final nuevo = (widget.montoPrincipal + delta).clamp(0.0, widget.total);
-    // Redondear a múltiplos de 0.50 para evitar acumulación de decimales
-    final redondeado = (nuevo / _paso).round() * _paso;
+    final redondeado = (nuevo / _pasoPrincipal).round() * _pasoPrincipal;
     final clamped = redondeado.clamp(0.0, widget.total);
     widget.onMontoPrincipalChanged(clamped);
     _ctrl0.text = clamped.toStringAsFixed(2);
     _ctrl1.text = (widget.total - clamped).toStringAsFixed(2);
+  }
+
+  /// Ajusta el monto del campo 1 en [delta] y auto-completa el campo 0.
+  void _ajustarSecundario(double delta) {
+    final montoSecundario = widget.total - widget.montoPrincipal;
+    final nuevo = (montoSecundario + delta).clamp(0.0, widget.total);
+    final redondeado = (nuevo / _pasoSecundario).round() * _pasoSecundario;
+    final clamped = redondeado.clamp(0.0, widget.total);
+    final newPrincipal = (widget.total - clamped).clamp(0.0, widget.total);
+    widget.onMontoPrincipalChanged(newPrincipal);
+    _ctrl0.text = newPrincipal.toStringAsFixed(2);
+    _ctrl1.text = clamped.toStringAsFixed(2);
   }
 
   void _onChanged0(String raw) {
@@ -863,11 +897,24 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
             // Encabezado: logo + nombre
             Row(
               children: [
-                if (img != null)
-                  Image.asset(img, height: 18)
-                else
-                  const Icon(Icons.payments_rounded,
-                      size: 18, color: AppColors.primaryBlue),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: metodoValor == 'yape'
+                        ? const Color(0xFF6B21A8).withValues(alpha: 0.13)
+                        : metodoValor == 'plin'
+                            ? const Color(0xFF0891B2).withValues(alpha: 0.13)
+                            : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: img != null
+                        ? Image.asset(img, height: 26)
+                        : const Icon(Icons.payments_rounded,
+                            size: 26, color: AppColors.primaryBlue),
+                  ),
+                ),
                 const SizedBox(width: 6),
                 Text(lbl,
                     style: const TextStyle(
@@ -936,19 +983,50 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
                 children: [
                   _ArrowBtn(
                     icon: Icons.keyboard_arrow_up_rounded,
-                    onTap: () => _ajustar(_paso),
+                    onTap: () => _ajustar(_pasoPrincipal),
                     enabled: widget.montoPrincipal < widget.total,
                   ),
                   const SizedBox(height: 2),
+                  const Text('S/1',
+                      style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryBlue)),
+                  const SizedBox(height: 2),
                   _ArrowBtn(
                     icon: Icons.keyboard_arrow_down_rounded,
-                    onTap: () => _ajustar(-_paso),
+                    onTap: () => _ajustar(-_pasoPrincipal),
                     enabled: widget.montoPrincipal > 0,
                   ),
                 ],
               ),
             ),
             _fieldCard(widget.metodos[1], _ctrl1, _onChanged1, false),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ArrowBtn(
+                    icon: Icons.keyboard_arrow_up_rounded,
+                    onTap: () => _ajustarSecundario(_pasoSecundario),
+                    enabled: widget.montoPrincipal > 0,
+                  ),
+                  const SizedBox(height: 2),
+                  const Text('.50',
+                      style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryBlue)),
+                  const SizedBox(height: 2),
+                  _ArrowBtn(
+                    icon: Icons.keyboard_arrow_down_rounded,
+                    onTap: () => _ajustarSecundario(-_pasoSecundario),
+                    enabled: widget.montoPrincipal < widget.total,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ],
