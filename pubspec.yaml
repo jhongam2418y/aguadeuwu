@@ -78,7 +78,9 @@ flutter:
   assets:
     - assets/images/app_icon.png
     - assets/images/yape.png
+    - assets/images/yapeBlanco.png
     - assets/images/plin.png
+    - assets/images/plinBlanco.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

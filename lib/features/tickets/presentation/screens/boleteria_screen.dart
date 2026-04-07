@@ -134,7 +134,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
                 children: [
                   // Panel izquierdo
                   Expanded(
-                    flex: 3,
+                    flex: 4,
                     child: _LeftPanel(
                       adultos: _adultos,
                       ninos: _ninos,
@@ -155,13 +155,16 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
                   // Panel derecho
                   Expanded(
                     flex: 2,
-                    child: _RightPanel(
-                      adultos: _adultos,
-                      ninos: _ninos,
-                      precioAdulto: precioAdulto,
-                      precioNino: precioNino,
-                      total: total,
-                      metodoPago: _buildMetodoSnap(total),
+                    child: ColoredBox(
+                      color: AppColors.panelBg,
+                      child: _RightPanel(
+                        adultos: _adultos,
+                        ninos: _ninos,
+                        precioAdulto: precioAdulto,
+                        precioNino: precioNino,
+                        total: total,
+                        metodoPago: _buildMetodoSnap(total),
+                      ),
                     ),
                   ),
                 ],
@@ -393,9 +396,8 @@ class _VerticalDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 1,
-      color: AppColors.tealBorderLight,
-      margin: const EdgeInsets.symmetric(vertical: 16),
+      width: 2,
+      color: AppColors.blueBorder,
     );
   }
 }
