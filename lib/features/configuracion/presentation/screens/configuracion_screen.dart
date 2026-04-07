@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:piscigranja/core/export/export_service.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
@@ -397,6 +399,8 @@ class _TabImpresora extends StatefulWidget {
 }
 
 class _TabImpresoraState extends State<_TabImpresora> {
+  bool _probando = false;
+
   static final _saveStyle = ElevatedButton.styleFrom(
     backgroundColor: _C.primary,
     foregroundColor: Colors.white,
@@ -410,6 +414,153 @@ class _TabImpresoraState extends State<_TabImpresora> {
     padding: const EdgeInsets.symmetric(vertical: 22),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
   );
+
+  static final _testStyle = ElevatedButton.styleFrom(
+    backgroundColor: _C.orange,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(vertical: 22),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  );
+
+  Future<void> _probarImpresora() async {
+    final nombreImpresora = widget.ctrl.text.trim();
+    if (nombreImpresora.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ingresa el nombre de la impresora primero'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _probando = true);
+    try {
+      final impresoras = await Printing.listPrinters();
+      final impresora = impresoras.cast<Printer?>().firstWhere(
+        (p) => p!.name == nombreImpresora,
+        orElse: () => null,
+      );
+      if (impresora == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Impresora "$nombreImpresora" no encontrada. Verifica el nombre o usa "Listar Impresoras".',
+            ),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+        return;
+      }
+
+      final pdf = await _buildTestPdf(nombreImpresora);
+      final pdfBytes = await pdf.save();
+      await Printing.directPrintPdf(
+        printer: impresora,
+        onLayout: (_) async => pdfBytes,
+        name: 'Prueba_Impresora',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Página de prueba enviada a la impresora'),
+          backgroundColor: _C.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al imprimir: $e'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _probando = false);
+    }
+  }
+
+  Future<pw.Document> _buildTestPdf(String nombreImpresora) async {
+    final pdf  = pw.Document();
+    const mmPt = PdfPageFormat.mm;
+    final now  = DateTime.now();
+    final fecha = '${now.day.toString().padLeft(2, '0')}/'
+        '${now.month.toString().padLeft(2, '0')}/${now.year}';
+    final hora = '${now.hour.toString().padLeft(2, '0')}:'
+        '${now.minute.toString().padLeft(2, '0')}:'
+        '${now.second.toString().padLeft(2, '0')}';
+
+    pw.Widget linea(String lbl, String val, {bool bold = false}) {
+      final s = bold
+          ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)
+          : const pw.TextStyle(fontSize: 11);
+      return pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [pw.Text(lbl, style: s), pw.Text(val, style: s)],
+      );
+    }
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
+        build: (_) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text('PISCIGRANJA',
+                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 2),
+            pw.Text('PAGINA DE PRUEBA',
+                style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Divider(thickness: 1),
+            pw.SizedBox(height: 4),
+            linea('Impresora:', nombreImpresora),
+            pw.SizedBox(height: 3),
+            linea('Fecha:', fecha),
+            pw.SizedBox(height: 3),
+            linea('Hora:', hora),
+            pw.SizedBox(height: 6),
+            pw.Divider(thickness: 1),
+            pw.SizedBox(height: 6),
+            pw.Text('Test de impresion de texto',
+                style: const pw.TextStyle(fontSize: 11)),
+            pw.SizedBox(height: 3),
+            pw.Text('TEXTO EN MAYUSCULAS',
+                style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 3),
+            pw.Text('texto en minusculas',
+                style: const pw.TextStyle(fontSize: 11)),
+            pw.SizedBox(height: 6),
+            pw.Text('Numeros: 0123456789',
+                style: const pw.TextStyle(fontSize: 11)),
+            pw.SizedBox(height: 3),
+            pw.Text('Simbolos: S/ \$ % # @ !',
+                style: const pw.TextStyle(fontSize: 11)),
+            pw.SizedBox(height: 6),
+            pw.Divider(thickness: 0.5),
+            pw.SizedBox(height: 3),
+            pw.Text('Lineas de ancho:', style: const pw.TextStyle(fontSize: 10)),
+            pw.SizedBox(height: 2),
+            pw.Text('--------------------------------',
+                style: const pw.TextStyle(fontSize: 10)),
+            pw.Text('================================',
+                style: const pw.TextStyle(fontSize: 10)),
+            pw.Text('################################',
+                style: const pw.TextStyle(fontSize: 10)),
+            pw.SizedBox(height: 6),
+            pw.Divider(thickness: 1.5),
+            pw.SizedBox(height: 4),
+            pw.Text('** Impresion correcta **',
+                style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    return pdf;
+  }
 
   Future<void> _listarImpresoras() async {
     final impresoras = await Printing.listPrinters();
@@ -510,7 +661,29 @@ class _TabImpresoraState extends State<_TabImpresora> {
               ),
             ],
           ),
-
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _probando ? null : _probarImpresora,
+            icon: _probando
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.print_outlined, size: 24),
+            label: Text(
+              _probando ? 'ENVIANDO PRUEBA...' : 'PROBAR IMPRESORA',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
+                fontSize: 16,
+              ),
+            ),
+            style: _testStyle,
+          ),
         ],
       ),
     );
@@ -1187,9 +1360,9 @@ class _SummaryCard extends StatelessWidget {
                   Text(
                     subtitulo!,
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: color.withValues(alpha: 0.65),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: color.withValues(alpha: 0.8),
                     ),
                   ),
                 ],

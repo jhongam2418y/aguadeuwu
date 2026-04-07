@@ -18,8 +18,20 @@ class BoleteriaScreen extends StatefulWidget {
 class _BoleteriaScreenState extends State<BoleteriaScreen> {
   int _adultos = 0;
   int _ninos = 0;
-  String _metodoPago = 'efectivo';
-  String? _segundoMetodo;
+  final _metodos = <String>['efectivo'];
+
+  String get _metodoSnap => _metodos.join('+');
+
+  void _toggleMetodo(String valor) {
+    setState(() {
+      final idx = _metodos.indexOf(valor);
+      if (idx >= 0) {
+        if (_metodos.length > 1) _metodos.removeAt(idx);
+      } else if (_metodos.length < 2) {
+        _metodos.add(valor);
+      }
+    });
+  }
 
   // ── Helpers de precio (sin lógica de UI, solo cálculos) ──────────────────
 
@@ -35,8 +47,9 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   void _resetear() => setState(() {
         _adultos = 0;
         _ninos = 0;
-        _metodoPago = 'efectivo';
-        _segundoMetodo = null;
+        _metodos
+          ..clear()
+          ..add('efectivo');
       });
 
   // ── Navegación a preview ──────────────────────────────────────────────────
@@ -53,9 +66,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
     // que un rebuild los mute mientras la pantalla está abierta.
     final adultoSnap = _adultos;
     final ninoSnap = _ninos;
-    final metodoSnap = _segundoMetodo != null
-        ? '$_metodoPago+$_segundoMetodo'
-        : _metodoPago;
+    final metodoSnap = _metodoSnap;
 
     await Navigator.push<void>(
       context,
@@ -114,16 +125,10 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
                       ninos: _ninos,
                       precioAdulto: precioAdulto,
                       precioNino: precioNino,
-                      metodoPago: _metodoPago,
-                      segundoMetodo: _segundoMetodo,
+                      metodos: _metodos,
                       onAdultosChanged: (v) => setState(() => _adultos = v),
                       onNinosChanged: (v) => setState(() => _ninos = v),
-                      onMetodoPagoChanged: (v) => setState(() {
-                        _metodoPago = v;
-                        if (_segundoMetodo == v) _segundoMetodo = null;
-                      }),
-                      onSegundoMetodoChanged: (v) =>
-                          setState(() => _segundoMetodo = v),
+                      onToggleMetodo: _toggleMetodo,
                     ),
                   ),
                   // Divisor
@@ -137,9 +142,7 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
                       precioAdulto: precioAdulto,
                       precioNino: precioNino,
                       total: total,
-                      metodoPago: _segundoMetodo != null
-                          ? '$_metodoPago+$_segundoMetodo'
-                          : _metodoPago,
+                      metodoPago: _metodoSnap,
                     ),
                   ),
                 ],
@@ -168,24 +171,20 @@ class _LeftPanel extends StatelessWidget {
   final int ninos;
   final double precioAdulto;
   final double precioNino;
-  final String metodoPago;
-  final String? segundoMetodo;
+  final List<String> metodos;
   final ValueChanged<int> onAdultosChanged;
   final ValueChanged<int> onNinosChanged;
-  final ValueChanged<String> onMetodoPagoChanged;
-  final ValueChanged<String?> onSegundoMetodoChanged;
+  final ValueChanged<String> onToggleMetodo;
 
   const _LeftPanel({
     required this.adultos,
     required this.ninos,
     required this.precioAdulto,
     required this.precioNino,
-    required this.metodoPago,
-    this.segundoMetodo,
+    required this.metodos,
     required this.onAdultosChanged,
     required this.onNinosChanged,
-    required this.onMetodoPagoChanged,
-    required this.onSegundoMetodoChanged,
+    required this.onToggleMetodo,
   });
 
   @override
@@ -219,11 +218,11 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 16),
           const _SectionLabel(texto: 'MÉTODO DE PAGO'),
           const SizedBox(height: 10),
-          _SelectorPago(
-            seleccionado: metodoPago,
-            segundoMetodo: segundoMetodo,
-            onChanged: onMetodoPagoChanged,
-            onSegundoMetodoChanged: onSegundoMetodoChanged,
+          Expanded(
+            child: _SelectorPago(
+              metodos: metodos,
+              onToggle: onToggleMetodo,
+            ),
           ),
           const SizedBox(height: 8),
         ],
@@ -538,36 +537,27 @@ const _metodosPago = [
 ];
 
 class _SelectorPago extends StatelessWidget {
-  final String seleccionado;
-  final String? segundoMetodo;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String?> onSegundoMetodoChanged;
+  final List<String> metodos;
+  final ValueChanged<String> onToggle;
 
   const _SelectorPago({
-    required this.seleccionado,
-    this.segundoMetodo,
-    required this.onChanged,
-    required this.onSegundoMetodoChanged,
+    required this.metodos,
+    required this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final lleno = metodos.length >= 2;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (int i = 0; i < _metodosPago.length; i++) ...[
           if (i > 0) const SizedBox(width: 10),
           _ChipPago(
             data: _metodosPago[i],
-            activo: seleccionado == _metodosPago[i].valor,
-            esSegundo: segundoMetodo == _metodosPago[i].valor,
-            onTap: () => onChanged(_metodosPago[i].valor),
-            onTapSegundo: seleccionado == _metodosPago[i].valor
-                ? null
-                : () => onSegundoMetodoChanged(
-                      segundoMetodo == _metodosPago[i].valor
-                          ? null
-                          : _metodosPago[i].valor,
-                    ),
+            orden: metodos.indexOf(_metodosPago[i].valor),
+            bloqueado: lleno && !metodos.contains(_metodosPago[i].valor),
+            onTap: () => onToggle(_metodosPago[i].valor),
           ),
         ],
       ],
@@ -576,98 +566,142 @@ class _SelectorPago extends StatelessWidget {
 }
 
 class _ChipPago extends StatelessWidget {
+  /// orden: -1 = inactivo · 0 = principal · 1 = adicional
   final _MetodoPagoData data;
-  final bool activo;
-  final bool esSegundo;
+  final int orden;
+  final bool bloqueado;
   final VoidCallback onTap;
-  final VoidCallback? onTapSegundo;
 
   const _ChipPago({
     required this.data,
-    required this.activo,
-    this.esSegundo = false,
+    required this.orden,
+    required this.bloqueado,
     required this.onTap,
-    this.onTapSegundo,
   });
+
+  static const _azul         = AppColors.primaryBlue;
+  static const _naranja      = Color(0xFFFF8F00);
+  static const _fondoNaranja = Color(0xFFFFF3E0);
+  static const _bordeVerde   = Color(0xFFB2DFDB);
 
   @override
   Widget build(BuildContext context) {
-    final chipColor = activo
-        ? AppColors.primaryBlue
-        : esSegundo
-            ? const Color(0xFFFFF3E0)
-            : Colors.white;
-    final borderColor = activo
-        ? AppColors.primaryBlue
-        : esSegundo
-            ? Colors.orange
-            : const Color(0xFFB2DFDB);
-    final iconColor = activo
-        ? Colors.white
-        : esSegundo
-            ? Colors.orange
-            : AppColors.primaryBlue;
+    final esPrimario  = orden == 0;
+    final esAdicional = orden == 1;
+    final activo      = esPrimario || esAdicional;
+
+    final chipColor   = esPrimario  ? _azul
+                      : esAdicional ? _fondoNaranja
+                      : bloqueado   ? const Color(0xFFF5F5F5)
+                      : Colors.white;
+    final borderColor = esPrimario  ? _azul
+                      : esAdicional ? _naranja
+                      : bloqueado   ? Colors.grey.shade300
+                      : _bordeVerde;
+    final iconColor   = esPrimario  ? Colors.white
+                      : esAdicional ? _naranja
+                      : bloqueado   ? Colors.grey.shade400
+                      : _azul;
+    final badgeColor  = esPrimario  ? _azul : _naranja;
+    final hint        = esPrimario  ? 'Principal'
+                      : esAdicional ? 'Adicional'
+                      : bloqueado   ? 'Quita uno'
+                      :               'Agregar';
 
     return Expanded(
-      child: Stack(
-        children: [
-          GestureDetector(
-            onTap: onTap,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              decoration: BoxDecoration(
-                color: chipColor,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: borderColor, width: 2),
-                boxShadow: activo
-                    ? [BoxShadow(color: AppColors.blueOpacity28, blurRadius: 8, offset: const Offset(0, 4))]
-                    : esSegundo
-                        ? [BoxShadow(color: Colors.orange.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4))]
-                        : const [],
-              ),
-              child: Column(
-                children: [
-                  Icon(data.icono, color: iconColor, size: 22),
-                  const SizedBox(height: 5),
-                  Text(data.label,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: iconColor)),
-                ],
-              ),
-            ),
+      child: GestureDetector(
+        onTap: bloqueado ? null : onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: chipColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor, width: 2),
+            boxShadow: esPrimario
+                ? [BoxShadow(
+                    color: AppColors.blueOpacity28,
+                    blurRadius: 8,
+                    offset: const Offset(0, 4))]
+                : esAdicional
+                    ? [BoxShadow(
+                        color: _naranja.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4))]
+                    : const [],
           ),
-          // Botón pequeño en esquina para agregar como 2do método
-          if (onTapSegundo != null)
-            Positioned(
-              top: 5,
-              right: 5,
-              child: GestureDetector(
-                onTap: onTapSegundo,
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: esSegundo ? Colors.orange : Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: esSegundo ? Colors.orange : Colors.grey.shade400,
-                      width: 1.5,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              SizedBox(
+                width: double.infinity,
+                height: double.infinity,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(data.icono, color: iconColor, size: 32),
+                    const SizedBox(height: 6),
+                    Text(
+                      data.label,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: iconColor,
+                      ),
                     ),
-                  ),
-                  child: Icon(
-                    esSegundo ? Icons.check_rounded : Icons.add_rounded,
-                    size: 10,
-                    color: esSegundo ? Colors.white : Colors.grey.shade500,
-                  ),
+                    const SizedBox(height: 4),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 150),
+                      child: Text(
+                        hint,
+                        key: ValueKey(hint),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: activo
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: iconColor.withValues(
+                              alpha: activo ? 0.85 : 0.65),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-        ],
+              if (activo)
+                Positioned(
+                  top: -8,
+                  right: -4,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: badgeColor.withValues(alpha: 0.35),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${orden + 1}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
