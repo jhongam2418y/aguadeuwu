@@ -21,8 +21,9 @@ abstract final class _C {
 }
 
 // Formateadores — instanciados una sola vez
-final _fmtFecha = DateFormat('dd/MM/yyyy');
-final _fmtHora  = DateFormat('HH:mm');
+final _fmtFecha     = DateFormat('dd/MM/yyyy');
+final _fmtHora      = DateFormat('HH:mm');
+final _fmtFechaLarga = DateFormat("EEEE, d 'de' MMMM 'de' yyyy", 'es');
 
 // =============================================================================
 // TicketPreviewScreen
@@ -116,7 +117,10 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pw.SizedBox(height: 4),
             pdfRow('TIPO:', 'Nueva Entrada'),
             pw.SizedBox(height: 3),
-            pdfRow('FECHA:', _fecha),
+            pdfRow('FECHA:', () {
+              final raw = _fmtFechaLarga.format(_ahora);
+              return raw[0].toUpperCase() + raw.substring(1);
+            }()),
             pw.SizedBox(height: 3),
             pdfRow('HORA:', _hora),
             pw.SizedBox(height: 4),
@@ -128,7 +132,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
               pw.SizedBox(height: 3),
             ],
             if (_ninos > 0) ...[
-              pdfRow('Ninos  (x$_ninos)',
+              pdfRow('Niños (x$_ninos)',
                   'S/ ${(_ninos * _precioNino).toStringAsFixed(2)}'),
               pw.SizedBox(height: 3),
             ],

@@ -29,7 +29,7 @@ class ExportService {
             t.adultos,
             t.ninos,
             t.monto.toStringAsFixed(2),
-            t.metodoPago,
+            t.metodoPago.split('+').map(TicketModel.formatearParte).join(' + '),
             t.anulado ? 'Anulado' : 'Completado',
           ]),
     ];
@@ -137,7 +137,7 @@ class ExportService {
                     '#TK-${t.ticketId}',
                     '${DateFormat('dd/MM/yy').format(t.hora)}\n${DateFormat('HH:mm').format(t.hora)}',
                     '${t.adultos > 0 ? "${t.adultos} Adulto${t.adultos > 1 ? 's' : ''}" : ""}${t.adultos > 0 && t.ninos > 0 ? " + " : ""}${t.ninos > 0 ? "${t.ninos} Niño${t.ninos > 1 ? 's' : ''}" : ""}',
-                    t.metodoPago[0].toUpperCase() + t.metodoPago.substring(1),
+                    t.metodoPago.split('+').map(TicketModel.formatearParte).join(' + '),
                     'S/ ${t.monto.toStringAsFixed(2)}',
                     t.anulado ? 'Anulado' : 'OK',
                   ]

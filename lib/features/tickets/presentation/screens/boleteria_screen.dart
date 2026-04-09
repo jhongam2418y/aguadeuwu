@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../configuracion/presentation/providers/config_provider.dart';
+import '../../data/models/ticket_model.dart';
 import '../providers/ticket_provider.dart';
+import '../widgets/arrow_btn.dart';
+import '../widgets/flecha_btn.dart';
 import 'ticket_preview_screen.dart';
 import '../../../../core/app_colors.dart';
 
@@ -247,7 +251,7 @@ class _LeftPanel extends StatelessWidget {
           const _SectionLabel(texto: 'MÉTODO DE PAGO'),
           const SizedBox(height: 10),
           SizedBox(
-            height: 110,
+            height: 128,
             child: _SelectorPago(
               metodos: metodos,
               onToggle: onToggleMetodo,
@@ -371,7 +375,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(0x18),
+                  color: Colors.white.withValues(alpha: 24 / 255),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text('BOLETERÍA',
@@ -428,7 +432,7 @@ class _ContadorCard extends StatelessWidget {
   final IconData icono;
   final int valor;
   final ValueChanged<int> onChanged;
-  static const int _max = 20;
+  static const int _max = 100;
 
   const _ContadorCard({
     required this.label,
@@ -485,7 +489,7 @@ class _ContadorCard extends StatelessWidget {
             ),
           ),
           // Controles: menos / valor / más
-          _FlechaBtn(
+          FlechaBtn(
             icono: Icons.remove_rounded,
             habilitado: valor > 0,
             onTap: () => onChanged(valor - 1),
@@ -500,7 +504,7 @@ class _ContadorCard extends StatelessWidget {
                       color: AppColors.primaryBlue)),
             ),
           ),
-          _FlechaBtn(
+          FlechaBtn(
             icono: Icons.add_rounded,
             habilitado: valor < _max,
             onTap: () => onChanged(valor + 1),
@@ -514,46 +518,6 @@ class _ContadorCard extends StatelessWidget {
 // =============================================================================
 // _FlechaBtn
 // =============================================================================
-class _FlechaBtn extends StatelessWidget {
-  final IconData icono;
-  final bool habilitado;
-  final VoidCallback onTap;
-
-  const _FlechaBtn({
-    required this.icono,
-    required this.habilitado,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: habilitado ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: habilitado ? AppColors.primaryBlue : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: habilitado
-              ? [
-                  BoxShadow(
-                      color: AppColors.blueOpacity35,
-                      blurRadius: 8,
-                      offset: const Offset(0, 3))
-                ]
-              : const [],
-        ),
-        child: Icon(
-          icono,
-          color: habilitado ? Colors.white : Colors.grey.shade400,
-          size: 28,
-        ),
-      ),
-    );
-  }
-}
-
 // =============================================================================
 // _SelectorPago
 // =============================================================================
@@ -664,9 +628,9 @@ class _ChipPago extends StatelessWidget {
     final badgeColor  = esPrimario  ? colorPrincipalMetodo : _naranja;
     final shadowColor = esPrimario  ? colorPrincipalMetodo.withValues(alpha: 0.35) : _naranja.withValues(alpha: 0.2);
     final hint        = esPrimario  ? 'Principal'
-                      : esAdicional ? 'Adicional'
+                      : esAdicional ? 'Secundario'
                       : bloqueado   ? 'Quita uno'
-                      :               'Agregar';
+                      :               'Adicional';
 
     return Expanded(
       child: GestureDetector(
@@ -694,44 +658,58 @@ class _ChipPago extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (data.imagePath != null)
+                    if (data.imagePath != null) ...[
                       Image.asset(
                         (esPrimario && data.valor == 'yape')
                             ? 'assets/images/yapeBlanco.png'
                             : (esPrimario && data.valor == 'plin')
                                 ? 'assets/images/plinBlanco.png'
                                 : data.imagePath!,
-                        height: 32,
+                        height: 46,
                         color: bloqueado ? Colors.grey.shade400 : null,
                         colorBlendMode: bloqueado ? BlendMode.srcIn : null,
-                      )
-                    else
-                      Icon(data.icono, color: iconColor, size: 32),
-                    const SizedBox(height: 6),
-                    Text(
-                      data.label,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: iconColor,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 150),
-                      child: Text(
-                        hint,
-                        key: ValueKey(hint),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: activo
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: iconColor.withValues(
-                              alpha: activo ? 0.85 : 0.65),
+                      const SizedBox(height: 6),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 150),
+                        child: Text(
+                          hint,
+                          key: ValueKey(hint),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: activo ? FontWeight.w600 : FontWeight.w400,
+                            color: iconColor.withValues(alpha: activo ? 0.85 : 0.65),
+                          ),
                         ),
                       ),
-                    ),
+                    ] else ...[
+                      Icon(data.icono, color: iconColor, size: 32),
+                      const SizedBox(height: 6),
+                      Text(
+                        data.label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: iconColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 150),
+                        child: Text(
+                          hint,
+                          key: ValueKey(hint),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: activo
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            color: iconColor.withValues(
+                                alpha: activo ? 0.85 : 0.65),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -774,6 +752,18 @@ class _ChipPago extends StatelessWidget {
   }
 }
 
+// Formatter que permite solo números con hasta 2 decimales (máx 6 dígitos enteros).
+class _MontoFormatter extends TextInputFormatter {
+  static final _re = RegExp(r'^\d{0,6}(\.\d{0,2})?$');
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) return newValue;
+    return _re.hasMatch(newValue.text) ? newValue : oldValue;
+  }
+}
+
 // =============================================================================
 // _SplitPagoPanel — inputs de monto para pago dividido
 // =============================================================================
@@ -798,26 +788,28 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
   late final TextEditingController _ctrl0;
   late final TextEditingController _ctrl1;
   bool _editando0 = false;
+  double _paso = 1.0;
+
+  static const _pasos = [1.0, 0.5, 0.1];
+  static const _pasosLabel = ['S/1', '.50', '.10'];
 
   @override
   void initState() {
     super.initState();
-    _ctrl0 = TextEditingController(
-        text: widget.montoPrincipal.toStringAsFixed(2));
-    _ctrl1 = TextEditingController(
-        text: (widget.total - widget.montoPrincipal).toStringAsFixed(2));
+    _ctrl0 = TextEditingController(text: widget.montoPrincipal.toStringAsFixed(2));
+    _ctrl1 = TextEditingController(text: (widget.total - widget.montoPrincipal).toStringAsFixed(2));
   }
 
   @override
   void didUpdateWidget(_SplitPagoPanel old) {
     super.didUpdateWidget(old);
-    // Sincronizar cuando cambia el total externamente (cambio de personas)
-    if (old.total != widget.total || old.metodos != widget.metodos) {
+    if (old.total != widget.total ||
+        old.metodos != widget.metodos ||
+        old.montoPrincipal != widget.montoPrincipal) {
       final m1 = widget.montoPrincipal.clamp(0.0, widget.total);
-      final m2 = (widget.total - m1).clamp(0.0, widget.total);
       if (!_editando0) {
         _ctrl0.text = m1.toStringAsFixed(2);
-        _ctrl1.text = m2.toStringAsFixed(2);
+        _ctrl1.text = (widget.total - m1).toStringAsFixed(2);
       }
     }
   }
@@ -834,50 +826,30 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
     return found?.label ?? (valor[0].toUpperCase() + valor.substring(1));
   }
 
-  String? _imagen(String valor) {
-    final found = _metodosPago.where((m) => m.valor == valor).firstOrNull;
-    return found?.imagePath;
-  }
+  String? _imagen(String valor) =>
+      _metodosPago.where((m) => m.valor == valor).firstOrNull?.imagePath;
 
-  static const _pasoPrincipal = 1.00;
-  static const _pasoSecundario = 0.50;
-
-  /// Ajusta el monto del campo 0 en [delta] (puede ser +0.50 o -0.50)
-  /// y sincroniza el campo 1.
-  void _ajustar(double delta) {
-    final nuevo = (widget.montoPrincipal + delta).clamp(0.0, widget.total);
-    final redondeado = (nuevo / _pasoPrincipal).round() * _pasoPrincipal;
-    final clamped = redondeado.clamp(0.0, widget.total);
-    widget.onMontoPrincipalChanged(clamped);
-    _ctrl0.text = clamped.toStringAsFixed(2);
-    _ctrl1.text = (widget.total - clamped).toStringAsFixed(2);
-  }
-
-  /// Ajusta el monto del campo 1 en [delta] y auto-completa el campo 0.
-  void _ajustarSecundario(double delta) {
-    final montoSecundario = widget.total - widget.montoPrincipal;
-    final nuevo = (montoSecundario + delta).clamp(0.0, widget.total);
-    final redondeado = (nuevo / _pasoSecundario).round() * _pasoSecundario;
-    final clamped = redondeado.clamp(0.0, widget.total);
-    final newPrincipal = (widget.total - clamped).clamp(0.0, widget.total);
-    widget.onMontoPrincipalChanged(newPrincipal);
-    _ctrl0.text = newPrincipal.toStringAsFixed(2);
-    _ctrl1.text = clamped.toStringAsFixed(2);
+  void _ajustar1(double delta) {
+    final sec = widget.total - widget.montoPrincipal;
+    final raw = (sec + delta).clamp(0.0, widget.total);
+    final v = double.parse(((raw / _paso).round() * _paso).toStringAsFixed(2)).clamp(0.0, widget.total);
+    final newP = double.parse((widget.total - v).toStringAsFixed(2)).clamp(0.0, widget.total);
+    widget.onMontoPrincipalChanged(newP);
+    _ctrl0.text = newP.toStringAsFixed(2);
+    _ctrl1.text = v.toStringAsFixed(2);
   }
 
   void _onChanged0(String raw) {
-    final v = double.tryParse(raw) ?? 0.0;
-    final clamped = v.clamp(0.0, widget.total);
-    widget.onMontoPrincipalChanged(clamped);
-    _ctrl1.text = (widget.total - clamped).toStringAsFixed(2);
+    final v = (double.tryParse(raw) ?? 0.0).clamp(0.0, widget.total);
+    widget.onMontoPrincipalChanged(v);
+    _ctrl1.text = (widget.total - v).toStringAsFixed(2);
   }
 
   void _onChanged1(String raw) {
-    final v = double.tryParse(raw) ?? 0.0;
-    final clamped = v.clamp(0.0, widget.total);
-    final newPrincipal = (widget.total - clamped).clamp(0.0, widget.total);
-    widget.onMontoPrincipalChanged(newPrincipal);
-    _ctrl0.text = newPrincipal.toStringAsFixed(2);
+    final v = (double.tryParse(raw) ?? 0.0).clamp(0.0, widget.total);
+    final newP = (widget.total - v).clamp(0.0, widget.total);
+    widget.onMontoPrincipalChanged(newP);
+    _ctrl0.text = newP.toStringAsFixed(2);
   }
 
   Widget _fieldCard(String metodoValor, TextEditingController ctrl,
@@ -896,7 +868,6 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Encabezado: logo + nombre
             Row(
               children: [
                 Container(
@@ -913,49 +884,81 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
                   child: Center(
                     child: img != null
                         ? Image.asset(img, height: 26)
-                        : const Icon(Icons.payments_rounded,
-                            size: 26, color: AppColors.primaryBlue),
+                        : const Icon(Icons.payments_rounded, size: 26, color: AppColors.primaryBlue),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Text(lbl,
                     style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primaryBlue)),
+                        fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryBlue)),
               ],
             ),
             const SizedBox(height: 8),
-            // Monto + flechas (solo en el campo principal)
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: ctrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    onTap: () => setState(() => _editando0 = isPrimary),
-                    onChanged: onChanged,
-                    onSubmitted: (_) => setState(() => _editando0 = false),
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w800),
-                    decoration: const InputDecoration(
-                      prefixText: 'S/ ',
-                      prefixStyle: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.text),
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-
-              ],
+            TextField(
+              controller: ctrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [_MontoFormatter()],
+              onTap: () => setState(() => _editando0 = isPrimary),
+              onChanged: onChanged,
+              onSubmitted: (_) => setState(() => _editando0 = false),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              decoration: const InputDecoration(
+                prefixText: 'S/ ',
+                prefixStyle: TextStyle(fontWeight: FontWeight.w700, color: AppColors.text),
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+                border: InputBorder.none,
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _stepSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (int i = 0; i < _pasos.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => setState(() => _paso = _pasos[i]),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+              decoration: BoxDecoration(
+                color: _paso == _pasos[i]
+                    ? AppColors.darkBlue
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: _paso == _pasos[i]
+                      ? AppColors.darkBlue
+                      : AppColors.blueBorder,
+                  width: 2,
+                ),
+                boxShadow: _paso == _pasos[i]
+                    ? [BoxShadow(
+                        color: AppColors.darkBlue.withValues(alpha: 0.30),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3))]
+                    : const [],
+              ),
+              child: Text(
+                _pasosLabel[i],
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: _paso == _pasos[i]
+                      ? Colors.white
+                      : AppColors.darkBlue,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -965,65 +968,40 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'DIVIDIR PAGO',
-          style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSoft,
-              letterSpacing: 0.8),
+        // Título + selector de paso en la misma fila
+        Row(
+          children: [
+            const Text(
+              'DIVIDIR PAGO',
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w700,
+                  color: AppColors.textSoft, letterSpacing: 0.8),
+            ),
+            const SizedBox(width: 10),
+            _stepSelector(),
+          ],
         ),
         const SizedBox(height: 8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _fieldCard(widget.metodos[0], _ctrl0, _onChanged0, true),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _ArrowBtn(
-                    icon: Icons.keyboard_arrow_up_rounded,
-                    onTap: () => _ajustar(_pasoPrincipal),
-                    enabled: widget.montoPrincipal < widget.total,
-                  ),
-                  const SizedBox(height: 2),
-                  const Text('S/1',
-                      style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primaryBlue)),
-                  const SizedBox(height: 2),
-                  _ArrowBtn(
-                    icon: Icons.keyboard_arrow_down_rounded,
-                    onTap: () => _ajustar(-_pasoPrincipal),
-                    enabled: widget.montoPrincipal > 0,
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(width: 8),
             _fieldCard(widget.metodos[1], _ctrl1, _onChanged1, false),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+              padding: const EdgeInsets.only(left: 6),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _ArrowBtn(
+                  ArrowBtn(
                     icon: Icons.keyboard_arrow_up_rounded,
-                    onTap: () => _ajustarSecundario(_pasoSecundario),
+                    onTap: () => _ajustar1(_paso),
                     enabled: widget.montoPrincipal > 0,
                   ),
-                  const SizedBox(height: 2),
-                  const Text('.50',
-                      style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primaryBlue)),
-                  const SizedBox(height: 2),
-                  _ArrowBtn(
+                  const SizedBox(height: 4),
+                  ArrowBtn(
                     icon: Icons.keyboard_arrow_down_rounded,
-                    onTap: () => _ajustarSecundario(-_pasoSecundario),
+                    onTap: () => _ajustar1(-_paso),
                     enabled: widget.montoPrincipal < widget.total,
                   ),
                 ],
@@ -1032,43 +1010,6 @@ class _SplitPagoPanelState extends State<_SplitPagoPanel> {
           ],
         ),
       ],
-    );
-  }
-}
-
-// Botón de flecha pequeño para el split de pago
-class _ArrowBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool enabled;
-  const _ArrowBtn(
-      {required this.icon, required this.onTap, required this.enabled});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: Container(
-        width: 44,
-        height: 38,
-        decoration: BoxDecoration(
-          color: enabled
-              ? AppColors.blueOpacity10
-              : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: enabled
-                ? AppColors.primaryBlue.withValues(alpha: 0.25)
-                : Colors.grey.shade300,
-            width: 1,
-          ),
-        ),
-        child: Icon(
-          icon,
-          size: 26,
-          color: enabled ? AppColors.primaryBlue : Colors.grey.shade400,
-        ),
-      ),
     );
   }
 }
@@ -1222,7 +1163,7 @@ class _TicketPreviewCard extends StatelessWidget {
       child: Column(
         children: [
           // Cabecera
-          _TicketHeader(),
+          const _TicketHeader(),
           // Cabecera de tabla
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
@@ -1292,7 +1233,7 @@ class _TicketPreviewCard extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  'PAGO: ${metodoPago.split('+').map((p) => '${p[0].toUpperCase()}${p.substring(1)}').join(' + ')}',
+                  'PAGO: ${metodoPago.split('+').map(TicketModel.formatearParte).join(' + ')}',
                   style: const TextStyle(fontSize: 10, color: Colors.grey),
                 ),
                 const SizedBox(height: 2),

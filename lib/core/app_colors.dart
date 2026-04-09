@@ -15,7 +15,7 @@ class AppColors {
   // Texto
   static const Color text     = Color(0xFF1A1A1A);
   static const Color textSoft = Color(0xFF4E6D68);
-  static const Color lightGrey = Colors.grey;
+  static const Color lightGrey = Color(0xFF9E9E9E);
 
   // Semánticos
   static const Color green        = Color(0xFF2E7D32);
