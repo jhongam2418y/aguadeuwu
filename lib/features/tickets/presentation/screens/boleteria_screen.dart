@@ -432,7 +432,7 @@ class _ContadorCard extends StatelessWidget {
   final IconData icono;
   final int valor;
   final ValueChanged<int> onChanged;
-  static const int _max = 100;
+  static const int _max = 200;
 
   const _ContadorCard({
     required this.label,
@@ -494,8 +494,9 @@ class _ContadorCard extends StatelessWidget {
             habilitado: valor > 0,
             onTap: () => onChanged(valor - 1),
           ),
+          const SizedBox(width: 8),
           SizedBox(
-            width: 72,
+            width: 90,
             child: Center(
               child: Text('$valor',
                   style: const TextStyle(
