@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:piscigranja/core/export/export_service.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../providers/config_provider.dart';
 import '../../data/models/config_model.dart';
@@ -69,12 +70,14 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
   DateTime _hasta              = DateTime.now();
   List<TicketModel> _historial = [];
   bool _historialCargando      = false;
+  bool _isFullScreen           = false;
 
   late final int _diaHoy = DateTime.now().weekday - 1;
 
   @override
   void initState() {
     super.initState();
+    _cargarEstadoPantalla();
     _tabController = TabController(
       length: 3,
       vsync: this,
@@ -98,6 +101,33 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
     }
     _impresoraCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _cargarEstadoPantalla() async {
+    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) return;
+    final fs = await windowManager.isFullScreen();
+    if (mounted) setState(() => _isFullScreen = fs);
+  }
+
+  Future<void> _togglePantalla() async {
+    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) return;
+    final next = !_isFullScreen;
+    if (next) {
+      // Entrar a pantalla completa: hay que habilitar resize primero,
+      // de lo contrario window_manager no puede cambiar las dimensiones.
+      await windowManager.setResizable(true);
+      await windowManager.setFullScreen(true);
+    } else {
+      // Salir de pantalla completa: primero salir, esperar al OS,
+      // luego restaurar tamaño fijo y bloquear resize.
+      await windowManager.setFullScreen(false);
+      // Pausa breve para que el OS termine de restaurar la ventana
+      await Future.delayed(const Duration(milliseconds: 250));
+      await windowManager.setSize(const Size(1366, 768));
+      await windowManager.center();
+      await windowManager.setResizable(false);
+    }
+    if (mounted) setState(() => _isFullScreen = next);
   }
 
   void _showSnack(String msg, {Color bg = _C.primary}) {
@@ -209,6 +239,14 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
         title: const Text('Configuración',
             style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
+          IconButton(
+            icon: Icon(_isFullScreen
+                ? Icons.fullscreen_exit_rounded
+                : Icons.fullscreen_rounded),
+            tooltip: _isFullScreen ? 'Modo ventana' : 'Pantalla completa',
+            onPressed: _togglePantalla,
+          ),
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.power_settings_new_rounded),
             tooltip: 'Salir',

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/app_colors.dart';
@@ -695,6 +698,153 @@ class _TicketItem extends StatelessWidget {
   final TicketModel ticket;
   const _TicketItem({required this.ticket});
 
+  Future<void> _mostrarOpciones(BuildContext context) async {
+    if (ticket.anulado) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => _TicketOpcionesDialog(
+        ticket: ticket,
+        onModificar: () {
+          Navigator.pop(ctx);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BoleteriaScreen(ticketEditar: ticket),
+            ),
+          ).then((_) {
+            if (context.mounted) {
+              context.read<TicketProvider>().cargarTicketsHoy();
+            }
+          });
+        },
+        onImprimir: () {
+          Navigator.pop(ctx);
+          _reimprimir(context);
+        },
+      ),
+    );
+  }
+
+  Future<void> _reimprimir(BuildContext context) async {
+    final cfg = context.read<ConfigProvider>();
+    final weekday = ticket.hora.weekday;
+    final precioAdulto = ticket.adultos > 0 && ticket.ninos == 0
+        ? ticket.monto / ticket.adultos
+        : cfg.precioAdulto(weekday);
+    final precioNino = ticket.ninos > 0 && ticket.adultos == 0
+        ? ticket.monto / ticket.ninos
+        : cfg.precioNino(weekday);
+    final nombreImpresora = cfg.nombreImpresora.trim();
+
+    final fmtFecha = DateFormat('dd/MM/yyyy');
+    final fmtHora  = DateFormat('HH:mm');
+    final fmtFechaLarga = DateFormat("EEEE, d 'de' MMMM 'de' yyyy", 'es');
+    final partesPago = ticket.metodoPago.split('+');
+
+    final pdf = pw.Document();
+    const mmPt = PdfPageFormat.mm;
+
+    pw.Widget pdfRow(String label, String value, {bool bold = false, double fontSize = 11}) {
+      final style = bold
+          ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
+          : pw.TextStyle(fontSize: fontSize);
+      return pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [pw.Text(label, style: style), pw.Text(value, style: style)],
+      );
+    }
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
+        build: (_) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text('PISCIGRANJA',
+                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 2),
+            pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
+            pw.SizedBox(height: 8),
+            pw.Divider(thickness: 0.5),
+            pw.SizedBox(height: 4),
+            pdfRow('TIPO:', 'Reimpresión'),
+            pw.SizedBox(height: 3),
+            pdfRow('FECHA:', () {
+              final raw = fmtFechaLarga.format(ticket.hora);
+              return raw[0].toUpperCase() + raw.substring(1);
+            }()),
+            pw.SizedBox(height: 3),
+            pdfRow('HORA:', fmtHora.format(ticket.hora)),
+            pw.SizedBox(height: 4),
+            pw.Divider(thickness: 0.5),
+            pw.SizedBox(height: 4),
+            if (ticket.adultos > 0) ...[              pdfRow('Adultos (x${ticket.adultos})',
+                  'S/ ${(ticket.adultos * precioAdulto).toStringAsFixed(2)}'),
+              pw.SizedBox(height: 3),
+            ],
+            if (ticket.ninos > 0) ...[              pdfRow('Niños (x${ticket.ninos})',
+                  'S/ ${(ticket.ninos * precioNino).toStringAsFixed(2)}'),
+              pw.SizedBox(height: 3),
+            ],
+            pw.Divider(thickness: 0.5),
+            pw.SizedBox(height: 4),
+            pdfRow('Subtotal:', 'S/ ${ticket.monto.toStringAsFixed(2)}'),
+            pw.SizedBox(height: 4),
+            pw.Divider(thickness: 1.5),
+            pw.SizedBox(height: 4),
+            pdfRow('TOTAL:', 'S/ ${ticket.monto.toStringAsFixed(2)}',
+                bold: true, fontSize: 16),
+            pw.SizedBox(height: 4),
+            pdfRow('Pago:', TicketModel.formatearParte(partesPago[0])),
+            if (partesPago.length > 1) ...[              pw.SizedBox(height: 2),
+              pdfRow('', TicketModel.formatearParte(partesPago[1])),
+            ],
+            pw.SizedBox(height: 8),
+            pw.Divider(thickness: 0.5),
+            pw.SizedBox(height: 6),
+            pw.Text('Gracias por su compra!',
+                style: const pw.TextStyle(fontSize: 10)),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final pdfBytes = await pdf.save();
+      if (nombreImpresora.isNotEmpty) {
+        final impresoras = await Printing.listPrinters();
+        final impresora = impresoras.firstWhere(
+          (p) => p.name == nombreImpresora,
+          orElse: () => throw Exception(
+              'Impresora "$nombreImpresora" no encontrada.'),
+        );
+        await Printing.directPrintPdf(
+          printer: impresora,
+          onLayout: (_) async => pdfBytes,
+        );
+      } else {
+        await Printing.layoutPdf(onLayout: (_) async => pdfBytes);
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ticket reimpreso correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al reimprimir: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _confirmarAnulacion(BuildContext context) async {
     final confirmar = await showDialog<bool>(
       context: context,
@@ -742,6 +892,7 @@ class _TicketItem extends StatelessWidget {
     final textDecoration = anulado ? TextDecoration.lineThrough : null;
 
     return GestureDetector(
+      onTap: anulado ? null : () => _mostrarOpciones(context),
       onLongPress: anulado ? null : () => _confirmarAnulacion(context),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -872,6 +1023,124 @@ class _TicketItem extends StatelessWidget {
     if (adultos > 0) parts.add('$adultos adulto${adultos > 1 ? 's' : ''}');
     if (ninos > 0) parts.add('$ninos niño${ninos > 1 ? 's' : ''}');
     return parts.join(' + ');
+  }
+}
+
+// =============================================================================
+// _TicketOpcionesDialog — modal con acciones Modificar / Imprimir
+// =============================================================================
+class _TicketOpcionesDialog extends StatelessWidget {
+  final TicketModel ticket;
+  final VoidCallback onModificar;
+  final VoidCallback onImprimir;
+
+  const _TicketOpcionesDialog({
+    required this.ticket,
+    required this.onModificar,
+    required this.onImprimir,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: SizedBox(
+        width: 260,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Cabecera
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '#${ticket.ticketId.toString().padLeft(4, '0')}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: _AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _TicketItem._paxLabel(ticket.adultos, ticket.ninos),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _AppColors.text,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'S/ ${ticket.monto.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: _AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Botón Modificar
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onModificar,
+                  icon: const Icon(Icons.edit_rounded, size: 20),
+                  label: const Text(
+                    'Modificar',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(11)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Botón Imprimir
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onImprimir,
+                  icon: const Icon(Icons.print_rounded, size: 20),
+                  label: const Text(
+                    'Imprimir',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    side: const BorderSide(color: _AppColors.primary, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(11)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 4)),
+                child: const Text('Cancelar', style: TextStyle(fontSize: 13)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

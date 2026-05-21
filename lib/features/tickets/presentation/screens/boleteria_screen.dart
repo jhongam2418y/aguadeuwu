@@ -13,7 +13,8 @@ import '../../../../core/app_colors.dart';
 // BoleteriaScreen
 // =============================================================================
 class BoleteriaScreen extends StatefulWidget {
-  const BoleteriaScreen({super.key});
+  final TicketModel? ticketEditar;
+  const BoleteriaScreen({super.key, this.ticketEditar});
 
   @override
   State<BoleteriaScreen> createState() => _BoleteriaScreenState();
@@ -25,6 +26,24 @@ class _BoleteriaScreenState extends State<BoleteriaScreen> {
   final _metodos = <String>['efectivo'];
   // monto asignado al primer método cuando hay pago dividido
   double _montoPrincipal = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    final t = widget.ticketEditar;
+    if (t != null) {
+      _adultos = t.adultos;
+      _ninos = t.ninos;
+      final partes = t.metodoPago.split('+');
+      _metodos
+        ..clear()
+        ..addAll(partes.map((p) => p.split(':')[0].trim()));
+      if (partes.length == 2) {
+        final montoStr = partes[0].contains(':') ? partes[0].split(':')[1].trim() : null;
+        _montoPrincipal = montoStr != null ? (double.tryParse(montoStr) ?? 0.0) : 0.0;
+      }
+    }
+  }
 
   String _buildMetodoSnap(double total) {
     if (_metodos.length == 2) {
