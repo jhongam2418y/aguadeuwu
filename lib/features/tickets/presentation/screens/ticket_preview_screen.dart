@@ -117,10 +117,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pw.SizedBox(height: 4),
             pdfRow('TIPO:', 'Nueva Entrada'),
             pw.SizedBox(height: 3),
-            pdfRow('FECHA:', () {
-              final raw = _fmtFechaLarga.format(_ahora);
-              return raw[0].toUpperCase() + raw.substring(1);
-            }()),
+            pdfRow('FECHA:', _fecha),
             pw.SizedBox(height: 3),
             pdfRow('HORA:', _hora),
             pw.SizedBox(height: 4),
@@ -153,7 +150,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pw.SizedBox(height: 8),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 6),
-            pw.Text('Gracias por su compra!',
+            pw.Text('Gracias por su visita!',
                 style: const pw.TextStyle(fontSize: 10)),
           ],
         ),
@@ -701,7 +698,7 @@ class _TicketCard extends StatelessWidget {
                     if (adultos > 0 && ninos > 0) const SizedBox(height: 7),
                     if (ninos > 0)
                       _TicketRow(
-                        label: 'Ninos (x$ninos)',
+                        label: 'Niños (x$ninos)',
                         value: 'S/ ${(ninos * precioNino).toStringAsFixed(2)}',
                       ),
                   ],
@@ -743,16 +740,7 @@ class _TicketCard extends StatelessWidget {
                 ),
               ),
 
-              // Código de barras
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Center(
-                  child: CustomPaint(
-                    size: const Size(180, 42),
-                    painter: _BarcodePainter(),
-                  ),
-                ),
-              ),
+
             ],
           ),
         ),

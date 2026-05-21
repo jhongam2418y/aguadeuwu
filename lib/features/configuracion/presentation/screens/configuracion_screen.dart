@@ -118,12 +118,22 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
       await windowManager.setResizable(true);
       await windowManager.setFullScreen(true);
     } else {
-      // Salir de pantalla completa: primero salir, esperar al OS,
-      // luego restaurar tamaño fijo y bloquear resize.
+      // Leer el tamaño del monitor ANTES de cualquier await para no usar
+      // context tras un gap asíncrono. Cuando estamos en fullscreen,
+      // MediaQuery devuelve exactamente las dimensiones de la pantalla física.
+      final screenSize = MediaQuery.sizeOf(context);
+      // Limitar el tamaño de la ventana al área disponible del monitor para
+      // que nunca desborde ni se recorte en pantallas más pequeñas.
+      final w = screenSize.width.clamp(800.0, 1366.0);
+      final h = screenSize.height.clamp(600.0, 768.0);
+
       await windowManager.setFullScreen(false);
-      // Pausa breve para que el OS termine de restaurar la ventana
-      await Future.delayed(const Duration(milliseconds: 250));
-      await windowManager.setSize(const Size(1366, 768));
+      // Pausa generosa para que Windows termine de restaurar la ventana
+      // antes de redimensionar (250 ms era insuficiente en algunos equipos).
+      await Future.delayed(const Duration(milliseconds: 400));
+      // Habilitar resize temporalmente o window_manager ignora setSize.
+      await windowManager.setResizable(true);
+      await windowManager.setSize(Size(w, h));
       await windowManager.center();
       await windowManager.setResizable(false);
     }
