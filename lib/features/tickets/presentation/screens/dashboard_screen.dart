@@ -738,7 +738,6 @@ class _TicketItem extends StatelessWidget {
 
     final fmtFecha = DateFormat('dd/MM/yyyy');
     final fmtHora  = DateFormat('HH:mm');
-    final fmtFechaLarga = DateFormat("EEEE, d 'de' MMMM 'de' yyyy", 'es');
     final partesPago = ticket.metodoPago.split('+');
 
     final pdf = pw.Document();
@@ -767,12 +766,9 @@ class _TicketItem extends StatelessWidget {
             pw.SizedBox(height: 8),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
-            pdfRow('TIPO:', 'Reimpresión'),
+            pdfRow('NRO. TICKET:', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
             pw.SizedBox(height: 3),
-            pdfRow('FECHA:', () {
-              final raw = fmtFechaLarga.format(ticket.hora);
-              return raw[0].toUpperCase() + raw.substring(1);
-            }()),
+            pdfRow('FECHA:', fmtFecha.format(ticket.hora)),
             pw.SizedBox(height: 3),
             pdfRow('HORA:', fmtHora.format(ticket.hora)),
             pw.SizedBox(height: 4),
@@ -788,8 +784,6 @@ class _TicketItem extends StatelessWidget {
             ],
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
-            pdfRow('Subtotal:', 'S/ ${ticket.monto.toStringAsFixed(2)}'),
-            pw.SizedBox(height: 4),
             pw.Divider(thickness: 1.5),
             pw.SizedBox(height: 4),
             pdfRow('TOTAL:', 'S/ ${ticket.monto.toStringAsFixed(2)}',
@@ -802,7 +796,7 @@ class _TicketItem extends StatelessWidget {
             pw.SizedBox(height: 8),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 6),
-            pw.Text('Gracias por su compra!',
+            pw.Text('Gracias por su Visita!',
                 style: const pw.TextStyle(fontSize: 10)),
           ],
         ),
@@ -1110,7 +1104,7 @@ class _TicketOpcionesDialog extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 18),
               // Botón Imprimir
               SizedBox(
                 width: double.infinity,
@@ -1130,7 +1124,7 @@ class _TicketOpcionesDialog extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 14),
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 4)),

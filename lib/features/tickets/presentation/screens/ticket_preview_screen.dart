@@ -90,6 +90,18 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
     const mmPt  = PdfPageFormat.mm;
     final partesPago = _metodoPago.split('+');
 
+    // Número de ticket — disponible solo tras guardar
+    String nroTicket = 'S/N';
+    if (_ticketDbId != null) {
+      try {
+        final t = context.read<TicketProvider>().ticketsHoy
+            .firstWhere((t) => t.id == _ticketDbId);
+        nroTicket = '#${t.ticketId.toString().padLeft(4, '0')}';
+      } catch (_) {
+        nroTicket = '#${_ticketDbId.toString().padLeft(4, '0')}';
+      }
+    }
+
     // Helper interno al método — no necesita ser un getter del estado
     pw.Widget pdfRow(String label, String value,
         {bool bold = false, double fontSize = 11}) {
@@ -115,7 +127,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pw.SizedBox(height: 8),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
-            pdfRow('TIPO:', 'Nueva Entrada'),
+            pdfRow('NRO. TICKET:', nroTicket),
             pw.SizedBox(height: 3),
             pdfRow('FECHA:', _fecha),
             pw.SizedBox(height: 3),
@@ -134,8 +146,6 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
               pw.SizedBox(height: 3),
             ],
             pw.Divider(thickness: 0.5),
-            pw.SizedBox(height: 4),
-            pdfRow('Subtotal:', 'S/ ${_total.toStringAsFixed(2)}'),
             pw.SizedBox(height: 4),
             pw.Divider(thickness: 1.5),
             pw.SizedBox(height: 4),
@@ -664,7 +674,7 @@ class _TicketCard extends StatelessWidget {
                     const SizedBox(height: 7),
                     _TicketRow(label: 'HORA:', value: hora),
                     const SizedBox(height: 7),
-                    const _TicketRow(label: 'TIPO:', value: 'ENTRADA GENERAL'),
+                    const _TicketRow(label: 'NRO. TICKET:', value: 'PENDIENTE'),
                     const SizedBox(height: 7),
                     Builder(builder: (_) {
                       final partes = metodoPago.split('+');
