@@ -784,8 +784,6 @@ class _TicketItem extends StatelessWidget {
             ],
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
-            pw.Divider(thickness: 1.5),
-            pw.SizedBox(height: 4),
             pdfRow('TOTAL:', 'S/ ${ticket.monto.toStringAsFixed(2)}',
                 bold: true, fontSize: 16),
             pw.SizedBox(height: 4),
