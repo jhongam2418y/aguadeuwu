@@ -755,15 +755,15 @@ class _TicketItem extends StatelessWidget {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat(80 * mmPt, 80 * mmPt, marginAll: 5 * mmPt),
+        pageFormat: PdfPageFormat(80 * mmPt, 80 * mmPt, marginAll: 7 * mmPt),
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Text('PISCIGRANJA',style: pw.TextStyle(fontSize: 16,fontWeight: pw.FontWeight.bold,
-                letterSpacing: 1.5,)),
+            pw.Text('PISCIGRANJA',
+                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 2),
-            pw.Text('Boleteria', style: pw.TextStyle(fontSize: 9,)),
-            pw.SizedBox(height: 3),
+            pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
+            pw.SizedBox(height: 8),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
             pdfRow('NRO. TICKET:', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
@@ -791,11 +791,11 @@ class _TicketItem extends StatelessWidget {
             if (partesPago.length > 1) ...[              pw.SizedBox(height: 2),
               pdfRow('', TicketModel.formatearParte(partesPago[1])),
             ],
-            pw.SizedBox(height: 3),
+            pw.SizedBox(height: 8),
             pw.Divider(thickness: 0.5),
-            pw.SizedBox(height: 2),
+            pw.SizedBox(height: 6),
             pw.Text('Gracias por su Visita!',
-                style: const pw.TextStyle(fontSize: 8)),
+                style: const pw.TextStyle(fontSize: 10)),
           ],
         ),
       ),
