@@ -708,9 +708,9 @@ class _TicketItem extends StatelessWidget {
     final partesPago = ticket.metodoPago.split('+');
 
     // ── Estilos pdf (no admiten const) ──────────────────────────────────
-    final styleNormal = pw.TextStyle(fontSize: 8);
-    final styleTotal  = pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold);
-    final styleHeader = pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold);
+    final styleNormal = pw.TextStyle(fontSize: 7);
+    final styleTotal  = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold);
+    final styleHeader = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold);
 
     // ── Helpers ──────────────────────────────────────────────────────────
     pw.Widget divider() => pw.Divider(thickness: 0.5, height: 2);
@@ -724,7 +724,7 @@ class _TicketItem extends StatelessWidget {
           ],
         );
 
-    final gap = pw.SizedBox(height: 1);
+    final gap = pw.SizedBox(height: 0.5);
 
     // ── PDF ───────────────────────────────────────────────────────────────
     final pdf  = pw.Document();
@@ -735,7 +735,7 @@ class _TicketItem extends StatelessWidget {
         pageFormat: PdfPageFormat(
           58 * mmPt,
           double.infinity,
-          marginAll: 5 * mmPt,
+          marginAll: 4 * mmPt,
         ),
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
@@ -760,19 +760,19 @@ class _TicketItem extends StatelessWidget {
             // DETALLE
             if (ticket.adultos > 0) ...[
               fila(
-                'Adultos S/${(precioAdulto)} (x${ticket.adultos})',
+                'Adultos S/${precioAdulto.toStringAsFixed(2)} (x${ticket.adultos})',
                 'S/ ${(ticket.adultos * precioAdulto).toStringAsFixed(2)}',
               ),
               gap,
             ],
+
             if (ticket.ninos > 0) ...[
               fila(
-                'Niños S/${(precioNino)} (x${ticket.ninos})',
+                'Niños S/${precioNino.toStringAsFixed(2)} (x${ticket.ninos})',
                 'S/ ${(ticket.ninos * precioNino).toStringAsFixed(2)}',
               ),
               gap,
             ],
-            divider(),
 
             // TOTAL
             fila(
