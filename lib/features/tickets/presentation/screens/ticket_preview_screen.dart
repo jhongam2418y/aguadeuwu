@@ -670,11 +670,11 @@ class _TicketCard extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                 child: Column(
                   children: [
+                    const _TicketRow(label: 'NRO. TICKET:', value: 'PENDIENTE'),
                     _TicketRow(label: 'FECHA:', value: fecha),
                     const SizedBox(height: 7),
                     _TicketRow(label: 'HORA:', value: hora),
                     const SizedBox(height: 7),
-                    const _TicketRow(label: 'NRO. TICKET:', value: 'PENDIENTE'),
                     const SizedBox(height: 7),
                     Builder(builder: (_) {
                       final partes = metodoPago.split('+');
@@ -702,13 +702,13 @@ class _TicketCard extends StatelessWidget {
                   children: [
                     if (adultos > 0)
                       _TicketRow(
-                        label: 'Adultos (x$adultos)',
+                        label: 'Adultos S/${(precioAdulto)} (x$adultos) ',
                         value: 'S/ ${(adultos * precioAdulto).toStringAsFixed(2)}',
                       ),
                     if (adultos > 0 && ninos > 0) const SizedBox(height: 7),
                     if (ninos > 0)
                       _TicketRow(
-                        label: 'Niños (x$ninos)',
+                        label: 'Niños S/${(precioNino)} (x$ninos) ',
                         value: 'S/ ${(ninos * precioNino).toStringAsFixed(2)}',
                       ),
                   ],
@@ -723,7 +723,7 @@ class _TicketCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'TOTAL ESTIMADO:',
+                      'TOTAL:',
                       style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
                     ),
                     Text(

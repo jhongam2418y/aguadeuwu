@@ -14,8 +14,7 @@ import '../providers/ticket_provider.dart';
 import '../widgets/stat_card.dart';
 import 'boleteria_screen.dart';
 
-// ─── Constantes de diseño centralizadas ──────────────────────────────────────
-// ─── Aliases a AppColors (fuente única de verdad) ────────────────────────────
+// ─── Aliases a AppColors ──────────────────────────────────────────────────────
 abstract final class _AppColors {
   static const primary      = AppColors.primaryBlue;
   static const primaryDark  = AppColors.darkBlue;
@@ -27,12 +26,10 @@ abstract final class _AppColors {
   static const background   = AppColors.lightBlueBackground;
 }
 
-// ─── Formateadores reutilizables (creados una sola vez) ──────────────────────
-final _fmtHora = DateFormat('HH:mm');
-final _fmtDia = DateFormat('EEEE', 'es');
+// ─── Formateadores reutilizables ──────────────────────────────────────────────
+final _fmtHora  = DateFormat('HH:mm');
+final _fmtDia   = DateFormat('EEEE', 'es');
 final _fmtFecha = DateFormat("EEEE d 'de' MMMM", 'es');
-
-// Parsea el campo metodoPago — lógica centralizada en TicketModel.parsearMetodoPago
 
 // =============================================================================
 // DashboardScreen
@@ -50,7 +47,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TicketProvider>().cargarTicketsHoy();
-      // Verificar actualizaciones al iniciar (sin bloquear la UI)
       checkAndPromptUpdate(context);
     });
   }
@@ -75,8 +71,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Leemos providers una sola vez con Selector para reconstruir solo
-    // los widgets que realmente dependen de cada dato.
     return Scaffold(
       backgroundColor: _AppColors.background,
       body: SafeArea(
@@ -90,7 +84,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             Expanded(
               child: _DashboardBody(
-                onNuevoTicket: _irABoleteria,
+                onNuevoTicket:  _irABoleteria,
                 onVerHistorial: _irAHistorial,
               ),
             ),
@@ -102,7 +96,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 // =============================================================================
-// _DashboardBody — isolado para que solo él se reconstruya con los providers
+// _DashboardBody
 // =============================================================================
 class _DashboardBody extends StatelessWidget {
   final VoidCallback onNuevoTicket;
@@ -114,112 +108,113 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tickets = context.select<TicketProvider, List<TicketModel>>((p) => p.ticketsHoy);
-    final cargando = context.select<TicketProvider, bool>((p) => p.cargando);
-    final error = context.select<TicketProvider, String?>((p) => p.error);
-
+    final tickets       = context.select<TicketProvider, List<TicketModel>>((p) => p.ticketsHoy);
+    final cargando      = context.select<TicketProvider, bool>((p) => p.cargando);
+    final error         = context.select<TicketProvider, String?>((p) => p.error);
     final ticketsActivos = tickets.where((t) => !t.anulado).toList();
-    final totalIngresos = ticketsActivos.fold<double>(0.0, (s, t) => s + t.monto);
+    final totalIngresos  = ticketsActivos.fold<double>(0.0, (s, t) => s + t.monto);
 
-    // ─── Layout fijo desktop táctil: 2 columnas sin scroll ──────────────────
     return Column(
       children: [
-        // Banner de error visible si el provider tuvo un fallo
         if (error != null)
           _ErrorBanner(
-            message: error,
+            message:  error,
             onDismiss: () => context.read<TicketProvider>().clearError(),
           ),
-        Expanded(child: Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Columna izquierda: estadísticas + tarifas + botón principal ───
-          Expanded(
-            flex: 3,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Greeting(
-                    fecha: _fmtFecha.format(DateTime.now()),
-                    diaLabel: _fmtDia.format(DateTime.now()).toUpperCase(),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Columna izquierda ──────────────────────────────────────
+                Expanded(
+                  flex: 3,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _Greeting(
+                          fecha:    _fmtFecha.format(DateTime.now()),
+                          diaLabel: _fmtDia.format(DateTime.now()).toUpperCase(),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: StatCard(
+                                icon:      Icons.confirmation_number_rounded,
+                                iconColor: _AppColors.primary,
+                                bgColor:   _AppColors.primaryLight,
+                                label:     'Tickets Hoy',
+                                value:     '${ticketsActivos.length}',
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: StatCard(
+                                icon:      Icons.payments_rounded,
+                                iconColor: _AppColors.green,
+                                bgColor:   _AppColors.greenLight,
+                                label:     'Ingresos Hoy',
+                                value:     'S/ ${totalIngresos.toStringAsFixed(2)}',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _PagoDesgloseCard(tickets: ticketsActivos),
+                        const SizedBox(height: 14),
+                        const _PreciosCard(),
+                        const SizedBox(height: 24),
+                        _NuevoTicketButton(onTap: onNuevoTicket),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 20),
-                  // Tarjetas de resumen
-                  Row(
-                  children: [
-                    Expanded(
-                      child: StatCard(
-                        icon: Icons.confirmation_number_rounded,
-                        iconColor: _AppColors.primary,
-                        bgColor: _AppColors.primaryLight,
-                        label: 'Tickets Hoy',
-                        value: '${ticketsActivos.length}',
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: StatCard(
-                        icon: Icons.payments_rounded,
-                        iconColor: _AppColors.green,
-                        bgColor: _AppColors.greenLight,
-                        label: 'Ingresos Hoy',
-                        value: 'S/ ${totalIngresos.toStringAsFixed(2)}',
-                      ),
-                    ),
-                  ],
                 ),
-                const SizedBox(height: 14),
-                _PagoDesgloseCard(tickets: ticketsActivos),
-                const SizedBox(height: 14),
-                const _PreciosCard(),
-                const SizedBox(height: 24),
-                _NuevoTicketButton(onTap: onNuevoTicket),
+
+                // Separador vertical
+                Container(
+                  width: 1,
+                  color: Colors.grey.shade200,
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                ),
+
+                // ── Columna derecha ────────────────────────────────────────
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _AppColors.primary.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: _HistorialInline(
+                      tickets:        tickets,
+                      cargando:       cargando,
+                      onVerHistorial: onVerHistorial,
+                    ),
+                  ),
+                ),
               ],
             ),
-            ),
           ),
-          // Separador vertical
-          Container(
-            width: 1,
-            color: Colors.grey.shade200,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-          ),
-          // ── Columna derecha: historial a pantalla completa ─────────────────
-          Expanded(
-            flex: 2,
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [
-                  BoxShadow(
-                    color: _AppColors.primary.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: _HistorialInline(
-                tickets: tickets,
-                cargando: cargando,
-                onVerHistorial: onVerHistorial,
-              ),
-            ),
-          ),
-        ],
-      ))),
+        ),
       ],
     );
   }
 }
 
 // =============================================================================
-// _TopBar  (const-safe: no depende de datos dinámicos)
+// _TopBar
 // =============================================================================
 class _TopBar extends StatelessWidget {
   final VoidCallback onSettingsTap;
@@ -238,18 +233,15 @@ class _TopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
-          // Logo icon
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.asset(
               'assets/images/app_icon.png',
-              width: 48,
-              height: 48,
+              width: 48, height: 48,
               fit: BoxFit.cover,
             ),
           ),
           const SizedBox(width: 12),
-          // Título de la app
           const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -275,7 +267,6 @@ class _TopBar extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          // Fecha y día actuales
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
@@ -374,7 +365,7 @@ class _DayBadge extends StatelessWidget {
 }
 
 // =============================================================================
-// _PreciosCard  — esFinde eliminado: el precio ya viene directo del cfg
+// _PreciosCard
 // =============================================================================
 class _PreciosCard extends StatelessWidget {
   const _PreciosCard();
@@ -382,8 +373,8 @@ class _PreciosCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final weekday = DateTime.now().weekday;
-    final adulto = context.select<ConfigProvider, double>((p) => p.precioAdulto(weekday));
-    final nino = context.select<ConfigProvider, double>((p) => p.precioNino(weekday));
+    final adulto  = context.select<ConfigProvider, double>((p) => p.precioAdulto(weekday));
+    final nino    = context.select<ConfigProvider, double>((p) => p.precioNino(weekday));
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -415,18 +406,12 @@ class _PreciosCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _TarifaItem(
-                  icon: Icons.person_rounded,
-                  label: 'Adulto',
-                  price: adulto,
-                ),
+                  icon: Icons.person_rounded, label: 'Adulto', price: adulto),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _TarifaItem(
-                  icon: Icons.child_care_rounded,
-                  label: 'Niño',
-                  price: nino,
-                ),
+                  icon: Icons.child_care_rounded, label: 'Niño', price: nino),
               ),
             ],
           ),
@@ -440,7 +425,11 @@ class _TarifaItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final double price;
-  const _TarifaItem({required this.icon, required this.label, required this.price});
+  const _TarifaItem({
+    required this.icon,
+    required this.label,
+    required this.price,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -482,7 +471,6 @@ class _NuevoTicketButton extends StatelessWidget {
   final VoidCallback onTap;
   const _NuevoTicketButton({required this.onTap});
 
-  // Decoración estática — se crea una sola vez
   static final _decoration = BoxDecoration(
     gradient: const LinearGradient(
       colors: [_AppColors.primary, _AppColors.primaryDark],
@@ -490,9 +478,9 @@ class _NuevoTicketButton extends StatelessWidget {
       end: Alignment.bottomRight,
     ),
     borderRadius: BorderRadius.circular(22),
-    boxShadow: [
+    boxShadow: const [
       BoxShadow(
-        color: Color(0x6600695C), // 0x66 ≈ alpha 0.4
+        color: Color(0x6600695C),
         blurRadius: 20,
         offset: Offset(0, 8),
       ),
@@ -529,7 +517,6 @@ class _NuevoTicketButton extends StatelessWidget {
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 13,
-                  fontWeight: FontWeight.w400,
                 ),
               ),
             ],
@@ -555,53 +542,40 @@ class _HistorialInline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header sticky
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade200),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.receipt_long_rounded,
-                    color: _AppColors.primary, size: 18),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'TICKETS DE HOY',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: _AppColors.text,
-                      letterSpacing: 0.5,
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.receipt_long_rounded,
+                  color: _AppColors.primary, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'TICKETS DE HOY',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: _AppColors.text,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                _CountBadge(count: tickets.length),
-              ],
-            ),
+              ),
+              _CountBadge(count: tickets.length),
+            ],
           ),
-
-          // Body con scroll
-          Expanded(
-            child: _HistorialScroll(
-              tickets: tickets,
-              cargando: cargando,
-            ),
-          ),
-
-          // Footer: acceso rápido al historial completo
-          _HistorialFooter(onTap: onVerHistorial),
-        ],
-      ),
+        ),
+        Expanded(
+          child: _HistorialScroll(tickets: tickets, cargando: cargando),
+        ),
+        _HistorialFooter(onTap: onVerHistorial),
+      ],
     );
   }
 }
@@ -613,12 +587,8 @@ class _HistorialScroll extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (cargando) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (tickets.isEmpty) {
-      return const _EmptyState();
-    }
+    if (cargando) return const Center(child: CircularProgressIndicator());
+    if (tickets.isEmpty) return const _EmptyState();
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemCount: tickets.length,
@@ -652,9 +622,6 @@ class _CountBadge extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// _EmptyState  (ahora const)
-// =============================================================================
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
@@ -725,147 +692,143 @@ class _TicketItem extends StatelessWidget {
   }
 
   Future<void> _reimprimir(BuildContext context) async {
-    final cfg = context.read<ConfigProvider>();
+    final cfg    = context.read<ConfigProvider>();
     final weekday = ticket.hora.weekday;
+
     final precioAdulto = ticket.adultos > 0 && ticket.ninos == 0
         ? ticket.monto / ticket.adultos
         : cfg.precioAdulto(weekday);
     final precioNino = ticket.ninos > 0 && ticket.adultos == 0
         ? ticket.monto / ticket.ninos
         : cfg.precioNino(weekday);
-    final nombreImpresora = cfg.nombreImpresora.trim();
 
-    final fmtFecha = DateFormat('dd/MM/yyyy');
-    final fmtHora  = DateFormat('HH:mm');
+    final nombreImpresora = cfg.nombreImpresora.trim();
+    final fmtFecha   = DateFormat('dd/MM/yyyy');
+    final fmtHora    = DateFormat('HH:mm');
     final partesPago = ticket.metodoPago.split('+');
 
-    final pdf = pw.Document();
-    const mmPt = PdfPageFormat.mm;
+    // ── Estilos pdf (no admiten const) ──────────────────────────────────
+    final styleNormal = pw.TextStyle(fontSize: 8);
+    final styleTotal  = pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold);
+    final styleHeader = pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold);
 
-    pw.Widget pdfRow(String label, String value, {bool bold = false, double fontSize = 11}) {
-      final style = bold
-          ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
-          : pw.TextStyle(fontSize: fontSize);
-      return pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [pw.Text(label, style: style), pw.Text(value, style: style)],
-      );
-    }
+    // ── Helpers ──────────────────────────────────────────────────────────
+    pw.Widget divider() => pw.Divider(thickness: 0.5, height: 4);
+
+    pw.Widget fila(String label, String valor, {pw.TextStyle? style}) =>
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(label, style: style ?? styleNormal),
+            pw.Text(valor, style: style ?? styleNormal),
+          ],
+        );
+
+    final gap = pw.SizedBox(height: 3);
+
+    // ── PDF ───────────────────────────────────────────────────────────────
+    final pdf  = pw.Document();
+    const mmPt = PdfPageFormat.mm;
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat(58 * mmPt, double.infinity,
-            marginAll: 5 * mmPt), 
+        pageFormat: PdfPageFormat(
+          58 * mmPt,
+          double.infinity,
+          marginAll: 5 * mmPt,
+        ),
         build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
 
-            /// HEADER
-            pw.Center(
-              child: pw.Text(
-                'PISCIGRANJA',
-                style: pw.TextStyle(
-                  fontSize: 12,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-            ),
-            pw.Center(
-              child: pw.Text(
-                'BOLETERÍA',
-                style: pw.TextStyle(fontSize: 8),
-              ),
-            ),
-
+            // HEADER
+            pw.Center(child: pw.Text('PISCIGRANJA', style: styleHeader)),
+            pw.Center(child: pw.Text('BOLETERÍA',   style: styleNormal)),
             pw.SizedBox(height: 4),
-            pw.Divider(),
+            divider(),
 
-            /// INFO
-            pdfRow('Ticket', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
-            pdfRow('Fecha', fmtFecha.format(ticket.hora)),
-            pdfRow('Hora', fmtHora.format(ticket.hora)),
+            // INFO
+            gap,
+            fila('Ticket', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
+            gap,
+            fila('Fecha', fmtFecha.format(ticket.hora)),
+            gap,
+            fila('Hora',  fmtHora.format(ticket.hora)),
+            gap,
+            divider(),
 
-            pw.Divider(),
-
-            /// DETALLE
-            if (ticket.adultos > 0)
-              pdfRow(
-                'Adulto x${ticket.adultos}',
-                (ticket.adultos * precioAdulto).toStringAsFixed(2),
+            // DETALLE
+            gap,
+            if (ticket.adultos > 0) ...[
+              fila(
+                'Adultos S/${(precioAdulto)} (x${ticket.adultos})',
+                'S/ ${(ticket.adultos * precioAdulto).toStringAsFixed(2)}',
               ),
-
-            if (ticket.ninos > 0)
-              pdfRow(
-                'Niño x${ticket.ninos}',
-                (ticket.ninos * precioNino).toStringAsFixed(2),
+              gap,
+            ],
+            if (ticket.ninos > 0) ...[
+              fila(
+                'Niños S/${(precioNino)} (x${ticket.ninos})',
+                'S/ ${(ticket.ninos * precioNino).toStringAsFixed(2)}',
               ),
+              gap,
+            ],
+            divider(),
+            gap,
 
-            pw.Divider(),
-
-            /// TOTAL
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'TOTAL',
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.Text(
-                  'S/ ${ticket.monto.toStringAsFixed(2)}',
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ],
+            // TOTAL
+            fila(
+              'TOTAL',
+              'S/ ${ticket.monto.toStringAsFixed(2)}',
+              style: styleTotal,
             ),
-
             pw.SizedBox(height: 4),
 
-            /// PAGO
+            // PAGO
             pw.Text(
               'Pago: ${TicketModel.formatearParte(partesPago[0])}',
-              style: pw.TextStyle(fontSize: 8),
+              style: styleNormal,
             ),
-            if (partesPago.length > 1)
+            if (partesPago.length > 1) ...[
+              gap,
               pw.Text(
                 TicketModel.formatearParte(partesPago[1]),
-                style: pw.TextStyle(fontSize: 8),
+                style: styleNormal,
               ),
+            ],
+            pw.SizedBox(height: 4),
+            divider(),
+            gap,
 
-            pw.Divider(),
-
-            /// FOOTER
+            // FOOTER
             pw.Center(
-              child: pw.Text(
-                'Gracias por su visita',
-                style: pw.TextStyle(fontSize: 8),
-              ),
+              child: pw.Text('Gracias por su visita', style: styleNormal),
             ),
           ],
         ),
       ),
     );
 
+    // ── Impresión ─────────────────────────────────────────────────────────
     try {
       final pdfBytes = await pdf.save();
+
       if (nombreImpresora.isNotEmpty) {
         final impresoras = await Printing.listPrinters();
-        final impresora = impresoras.firstWhere(
+        final impresora  = impresoras.firstWhere(
           (p) => p.name == nombreImpresora,
           orElse: () => throw Exception(
-              'Impresora "$nombreImpresora" no encontrada.'),
+            'Impresora "$nombreImpresora" no encontrada.',
+          ),
         );
         await Printing.directPrintPdf(
-          printer: impresora,
+          printer:  impresora,
           onLayout: (_) async => pdfBytes,
         );
       } else {
         await Printing.layoutPdf(onLayout: (_) async => pdfBytes);
       }
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -892,7 +855,8 @@ class _TicketItem extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Anular Ticket'),
         content: Text(
-          '¿Desea anular el ticket #${ticket.ticketId}? Esta acción no se puede deshacer.',
+          '¿Desea anular el ticket #${ticket.ticketId}? '
+          'Esta acción no se puede deshacer.',
         ),
         actions: [
           TextButton(
@@ -917,29 +881,29 @@ class _TicketItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Variables locales para evitar accesos repetidos al objeto
-    final anulado = ticket.anulado;
-    final hora = _fmtHora.format(ticket.hora);
-    final totalPax = ticket.adultos + ticket.ninos;
-    final metodos = TicketModel.parsearMetodoPago(ticket.metodoPago);
-    final esEfectivo = metodos.keys.length == 1 && metodos.keys.first == 'efectivo';
+    final anulado       = ticket.anulado;
+    final hora          = _fmtHora.format(ticket.hora);
+    final totalPax      = ticket.adultos + ticket.ninos;
+    final metodos       = TicketModel.parsearMetodoPago(ticket.metodoPago);
+    final esEfectivo    = metodos.keys.length == 1 &&
+                          metodos.keys.first == 'efectivo';
 
-    // Colores derivados del estado — calculados una vez
-    final idBgColor = anulado ? Colors.red.shade50 : _AppColors.primaryLight;
-    final idTextColor = anulado ? Colors.red.shade400 : _AppColors.primary;
-    final mainTextColor = anulado ? Colors.grey.shade400 : _AppColors.text;
-    final badgeBgColor = anulado ? Colors.red.shade50 : _AppColors.greenLight;
-    final badgeTextColor = anulado ? Colors.red.shade400 : _AppColors.green;
+    final idBgColor      = anulado ? Colors.red.shade50   : _AppColors.primaryLight;
+    final idTextColor    = anulado ? Colors.red.shade400  : _AppColors.primary;
+    final mainTextColor  = anulado ? Colors.grey.shade400 : _AppColors.text;
+    final badgeBgColor   = anulado ? Colors.red.shade50   : _AppColors.greenLight;
+    final badgeTextColor = anulado ? Colors.red.shade400  : _AppColors.green;
     final textDecoration = anulado ? TextDecoration.lineThrough : null;
 
     return GestureDetector(
-      onTap: anulado ? null : () => _mostrarOpciones(context),
+      onTap:       anulado ? null : () => _mostrarOpciones(context),
       onLongPress: anulado ? null : () => _confirmarAnulacion(context),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           color: anulado ? AppColors.errorLight : Colors.white,
           borderRadius: BorderRadius.circular(14),
+          border: anulado ? Border.all(color: Colors.red.shade200) : null,
           boxShadow: [
             BoxShadow(
               color: (anulado ? Colors.red : _AppColors.primary)
@@ -948,14 +912,12 @@ class _TicketItem extends StatelessWidget {
               offset: const Offset(0, 3),
             ),
           ],
-          border: anulado
-              ? Border.all(color: Colors.red.shade200)
-              : null,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
+
               // ID badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1009,7 +971,9 @@ class _TicketItem extends StatelessWidget {
                         ),
                         const SizedBox(width: 3),
                         Text(
-                          metodos.keys.map(TicketModel.formatearParte).join(' + '),
+                          metodos.keys
+                              .map(TicketModel.formatearParte)
+                              .join(' + '),
                           style: TextStyle(
                               fontSize: 11, color: Colors.grey.shade500),
                         ),
@@ -1034,8 +998,8 @@ class _TicketItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: badgeBgColor,
                       borderRadius: BorderRadius.circular(20),
@@ -1058,17 +1022,16 @@ class _TicketItem extends StatelessWidget {
     );
   }
 
-  /// Genera etiqueta de pasajeros: "2 adultos + 1 niño"
   static String _paxLabel(int adultos, int ninos) {
     final parts = <String>[];
     if (adultos > 0) parts.add('$adultos adulto${adultos > 1 ? 's' : ''}');
-    if (ninos > 0) parts.add('$ninos niño${ninos > 1 ? 's' : ''}');
+    if (ninos > 0)   parts.add('$ninos niño${ninos > 1 ? 's' : ''}');
     return parts.join(' + ');
   }
 }
 
 // =============================================================================
-// _TicketOpcionesDialog — modal con acciones Modificar / Imprimir
+// _TicketOpcionesDialog
 // =============================================================================
 class _TicketOpcionesDialog extends StatelessWidget {
   final TicketModel ticket;
@@ -1092,12 +1055,12 @@ class _TicketOpcionesDialog extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Cabecera
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
                       color: _AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(8),
@@ -1132,7 +1095,6 @@ class _TicketOpcionesDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Botón Modificar
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -1151,8 +1113,7 @@ class _TicketOpcionesDialog extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
-              // Botón Imprimir
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -1165,25 +1126,28 @@ class _TicketOpcionesDialog extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    side: const BorderSide(color: _AppColors.primary, width: 1.5),
+                    side: const BorderSide(
+                        color: _AppColors.primary, width: 1.5),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(11)),
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
                     foregroundColor: _AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(11)),
                   ),
                   child: const Text(
                     'Cancelar',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -1196,7 +1160,7 @@ class _TicketOpcionesDialog extends StatelessWidget {
 }
 
 // =============================================================================
-// _HistorialFooter — botón de acceso al historial completo
+// _HistorialFooter
 // =============================================================================
 class _HistorialFooter extends StatelessWidget {
   final VoidCallback onTap;
@@ -1236,7 +1200,7 @@ class _HistorialFooter extends StatelessWidget {
 }
 
 // =============================================================================
-// _ErrorBanner — muestra errores del provider con botón de cierre
+// _ErrorBanner
 // =============================================================================
 class _ErrorBanner extends StatelessWidget {
   final String message;
@@ -1257,9 +1221,10 @@ class _ErrorBanner extends StatelessWidget {
             child: Text(
               message,
               style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.red.shade700,
-                  fontWeight: FontWeight.w600),
+                fontSize: 13,
+                color: Colors.red.shade700,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           IconButton(
@@ -1276,7 +1241,7 @@ class _ErrorBanner extends StatelessWidget {
 }
 
 // =============================================================================
-// _PagoDesgloseCard — desglose de ingresos por método de pago
+// _PagoDesgloseCard
 // =============================================================================
 class _PagoDesgloseCard extends StatelessWidget {
   final List<TicketModel> tickets;
@@ -1286,19 +1251,16 @@ class _PagoDesgloseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (tickets.isEmpty) return const SizedBox.shrink();
 
-    // Agrupa montos por método de pago (parsea formato con montos divididos)
     final porMetodo = <String, double>{};
     for (final t in tickets) {
       final metodos = TicketModel.parsearMetodoPago(t.metodoPago);
       if (metodos.values.every((v) => v != null)) {
-        // Formato nuevo con montos explícitos
         for (final e in metodos.entries) {
           porMetodo[e.key] = (porMetodo[e.key] ?? 0) + e.value!;
         }
       } else {
-        // Formato antiguo sin montos: acumular monto total al primer método
-        final keys = metodos.keys.toList();
-        porMetodo[keys[0]] = (porMetodo[keys[0]] ?? 0) + t.monto;
+        final key = metodos.keys.first;
+        porMetodo[key] = (porMetodo[key] ?? 0) + t.monto;
       }
     }
 
@@ -1330,7 +1292,7 @@ class _PagoDesgloseCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              for (final entry in porMetodo.entries) ...[
+              for (final entry in porMetodo.entries)
                 Expanded(
                   child: _TarifaItem(
                     icon: entry.key == 'efectivo'
@@ -1340,7 +1302,6 @@ class _PagoDesgloseCard extends StatelessWidget {
                     price: entry.value,
                   ),
                 ),
-              ],
             ],
           ),
         ],
