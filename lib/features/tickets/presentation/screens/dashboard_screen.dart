@@ -114,10 +114,10 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TicketProvider>();
-    final cfg = context.watch<ConfigProvider>();
+    final tickets = context.select<TicketProvider, List<TicketModel>>((p) => p.ticketsHoy);
+    final cargando = context.select<TicketProvider, bool>((p) => p.cargando);
+    final error = context.select<TicketProvider, String?>((p) => p.error);
 
-    final tickets = provider.ticketsHoy;
     final ticketsActivos = tickets.where((t) => !t.anulado).toList();
     final totalIngresos = ticketsActivos.fold<double>(0.0, (s, t) => s + t.monto);
 
@@ -125,10 +125,10 @@ class _DashboardBody extends StatelessWidget {
     return Column(
       children: [
         // Banner de error visible si el provider tuvo un fallo
-        if (provider.error != null)
+        if (error != null)
           _ErrorBanner(
-            message: provider.error!,
-            onDismiss: provider.clearError,
+            message: error,
+            onDismiss: () => context.read<TicketProvider>().clearError(),
           ),
         Expanded(child: Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
@@ -174,7 +174,7 @@ class _DashboardBody extends StatelessWidget {
                 const SizedBox(height: 14),
                 _PagoDesgloseCard(tickets: ticketsActivos),
                 const SizedBox(height: 14),
-                _PreciosCard(cfg: cfg),
+                const _PreciosCard(),
                 const SizedBox(height: 24),
                 _NuevoTicketButton(onTap: onNuevoTicket),
               ],
@@ -206,7 +206,7 @@ class _DashboardBody extends StatelessWidget {
               ),
               child: _HistorialInline(
                 tickets: tickets,
-                cargando: provider.cargando,
+                cargando: cargando,
                 onVerHistorial: onVerHistorial,
               ),
             ),
@@ -377,14 +377,13 @@ class _DayBadge extends StatelessWidget {
 // _PreciosCard  — esFinde eliminado: el precio ya viene directo del cfg
 // =============================================================================
 class _PreciosCard extends StatelessWidget {
-  final ConfigProvider cfg;
-  const _PreciosCard({required this.cfg});
+  const _PreciosCard();
 
   @override
   Widget build(BuildContext context) {
     final weekday = DateTime.now().weekday;
-    final adulto = cfg.precioAdulto(weekday);
-    final nino = cfg.precioNino(weekday);
+    final adulto = context.select<ConfigProvider, double>((p) => p.precioAdulto(weekday));
+    final nino = context.select<ConfigProvider, double>((p) => p.precioNino(weekday));
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -755,47 +754,97 @@ class _TicketItem extends StatelessWidget {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat(80 * mmPt,double.infinity, marginAll: 7 * mmPt),
+        pageFormat: PdfPageFormat(58 * mmPt, double.infinity,
+            marginAll: 5 * mmPt), 
         build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('PISCIGRANJA',
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 2),
-            pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
-            pw.SizedBox(height: 8),
-            
+
+            /// HEADER
+            pw.Center(
+              child: pw.Text(
+                'PISCIGRANJA',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.Center(
+              child: pw.Text(
+                'BOLETERÍA',
+                style: pw.TextStyle(fontSize: 8),
+              ),
+            ),
+
             pw.SizedBox(height: 4),
-            pdfRow('NRO. TICKET:', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
-            pw.SizedBox(height: 3),
-            pdfRow('FECHA:', fmtFecha.format(ticket.hora)),
-            pw.SizedBox(height: 3),
-            pdfRow('HORA:', fmtHora.format(ticket.hora)),
+            pw.Divider(),
+
+            /// INFO
+            pdfRow('Ticket', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
+            pdfRow('Fecha', fmtFecha.format(ticket.hora)),
+            pdfRow('Hora', fmtHora.format(ticket.hora)),
+
+            pw.Divider(),
+
+            /// DETALLE
+            if (ticket.adultos > 0)
+              pdfRow(
+                'Adulto x${ticket.adultos}',
+                (ticket.adultos * precioAdulto).toStringAsFixed(2),
+              ),
+
+            if (ticket.ninos > 0)
+              pdfRow(
+                'Niño x${ticket.ninos}',
+                (ticket.ninos * precioNino).toStringAsFixed(2),
+              ),
+
+            pw.Divider(),
+
+            /// TOTAL
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'TOTAL',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  'S/ ${ticket.monto.toStringAsFixed(2)}',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+
             pw.SizedBox(height: 4),
-            pw.Divider(thickness: 0.5),
-            pw.SizedBox(height: 4),
-            if (ticket.adultos > 0) ...[              pdfRow('Adultos (x${ticket.adultos})',
-                  'S/ ${(ticket.adultos * precioAdulto).toStringAsFixed(2)}'),
-              pw.SizedBox(height: 3),
-            ],
-            if (ticket.ninos > 0) ...[              pdfRow('Niños (x${ticket.ninos})',
-                  'S/ ${(ticket.ninos * precioNino).toStringAsFixed(2)}'),
-              pw.SizedBox(height: 3),
-            ],
-            
-            pw.SizedBox(height: 4),
-            pdfRow('TOTAL:', 'S/ ${ticket.monto.toStringAsFixed(2)}',
-                bold: true, fontSize: 16),
-            pw.SizedBox(height: 4),
-            pdfRow('Pago:', TicketModel.formatearParte(partesPago[0])),
-            if (partesPago.length > 1) ...[              pw.SizedBox(height: 2),
-              pdfRow('', TicketModel.formatearParte(partesPago[1])),
-            ],
-            pw.SizedBox(height: 8),
-            pw.Divider(thickness: 0.5),
-            pw.SizedBox(height: 6),
-            pw.Text('Gracias por su Visita!',
-                style: const pw.TextStyle(fontSize: 10)),
+
+            /// PAGO
+            pw.Text(
+              'Pago: ${TicketModel.formatearParte(partesPago[0])}',
+              style: pw.TextStyle(fontSize: 8),
+            ),
+            if (partesPago.length > 1)
+              pw.Text(
+                TicketModel.formatearParte(partesPago[1]),
+                style: pw.TextStyle(fontSize: 8),
+              ),
+
+            pw.Divider(),
+
+            /// FOOTER
+            pw.Center(
+              child: pw.Text(
+                'Gracias por su visita',
+                style: pw.TextStyle(fontSize: 8),
+              ),
+            ),
           ],
         ),
       ),
@@ -1123,10 +1172,20 @@ class _TicketOpcionesDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 4)),
-                child: const Text('Cancelar', style: TextStyle(fontSize: 13)),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+                    foregroundColor: _AppColors.primary,
+                  ),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
               ),
             ],
           ),
