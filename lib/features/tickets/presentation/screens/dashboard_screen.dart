@@ -713,7 +713,7 @@ class _TicketItem extends StatelessWidget {
     final styleHeader = pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold);
 
     // ── Helpers ──────────────────────────────────────────────────────────
-    pw.Widget divider() => pw.Divider(thickness: 0.5, height: 4);
+    pw.Widget divider() => pw.Divider(thickness: 0.5, height: 2);
 
     pw.Widget fila(String label, String valor, {pw.TextStyle? style}) =>
         pw.Row(
@@ -724,7 +724,7 @@ class _TicketItem extends StatelessWidget {
           ],
         );
 
-    final gap = pw.SizedBox(height: 3);
+    final gap = pw.SizedBox(height: 1);
 
     // ── PDF ───────────────────────────────────────────────────────────────
     final pdf  = pw.Document();
@@ -758,7 +758,6 @@ class _TicketItem extends StatelessWidget {
             divider(),
 
             // DETALLE
-            gap,
             if (ticket.adultos > 0) ...[
               fila(
                 'Adultos S/${(precioAdulto)} (x${ticket.adultos})',
@@ -774,7 +773,6 @@ class _TicketItem extends StatelessWidget {
               gap,
             ],
             divider(),
-            gap,
 
             // TOTAL
             fila(
