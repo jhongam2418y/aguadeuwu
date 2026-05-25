@@ -239,6 +239,108 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
     }
   }
 
+  Future<void> _imprimirDesdeHistorial(TicketModel ticket) async {
+    final cfg    = context.read<ConfigProvider>();
+    final weekday = ticket.hora.weekday;
+
+    final precioAdulto = ticket.adultos > 0 && ticket.ninos == 0
+        ? ticket.monto / ticket.adultos
+        : cfg.precioAdulto(weekday);
+    final precioNino = ticket.ninos > 0 && ticket.adultos == 0
+        ? ticket.monto / ticket.ninos
+        : cfg.precioNino(weekday);
+
+    final nombreImpresora = cfg.nombreImpresora.trim();
+    final fmtFecha   = DateFormat('dd/MM/yyyy');
+    final fmtHora    = DateFormat('HH:mm');
+    final partesPago = ticket.metodoPago.split('+');
+
+    final styleNormal = pw.TextStyle(fontSize: 7);
+    final styleTotal  = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold);
+    final styleHeader = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold);
+
+    pw.Widget divider() => pw.Divider(thickness: 0.5, height: 2);
+    pw.Widget fila(String label, String valor, {pw.TextStyle? style}) {
+      return pw.Row(
+        children: [
+          pw.Expanded(
+            child: pw.Text(label, style: style ?? styleNormal, maxLines: 1),
+          ),
+          pw.SizedBox(width: 5),
+          pw.Text(valor, style: style ?? styleNormal),
+        ],
+      );
+    }
+
+    final gap = pw.SizedBox(height: 0.5);
+    final hayDetalle = ticket.adultos > 0 || ticket.ninos > 0;
+
+    final pdf  = pw.Document();
+    const mmPt = PdfPageFormat.mm;
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 4 * mmPt),
+        build: (_) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            pw.Center(child: pw.Text('PISCIGRANJA', style: styleHeader)),
+            pw.Center(child: pw.Text('BOLETERÍA',   style: styleNormal)),
+            pw.SizedBox(height: 4),
+            divider(),
+            gap,
+            fila('Ticket', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
+            gap,
+            fila('Fecha', fmtFecha.format(ticket.hora)),
+            gap,
+            fila('Hora',  fmtHora.format(ticket.hora)),
+            gap,
+            divider(),
+            if (ticket.adultos > 0)
+              fila(
+                'Adultos S/\${precioAdulto.toStringAsFixed(2)} (x\${ticket.adultos})',
+                'S/ \${(ticket.adultos * precioAdulto).toStringAsFixed(2)}',
+              ),
+            if (ticket.ninos > 0)
+              fila(
+                'Niños S/\${precioNino.toStringAsFixed(2)} (x\${ticket.ninos})',
+                'S/ \${(ticket.ninos * precioNino).toStringAsFixed(2)}',
+              ),
+            if (hayDetalle) divider(),
+            fila('TOTAL', 'S/ \${ticket.monto.toStringAsFixed(2)}', style: styleTotal),
+            pw.SizedBox(height: 4),
+            fila('Pago:', TicketModel.formatearParte(partesPago[0])),
+            if (partesPago.length > 1) ...[gap, fila('', TicketModel.formatearParte(partesPago[1]))],
+            pw.SizedBox(height: 4),
+            divider(),
+            gap,
+            pw.Center(child: pw.Text('Gracias por su visita', style: styleNormal)),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final pdfBytes = await pdf.save();
+      if (nombreImpresora.isNotEmpty) {
+        final impresoras = await Printing.listPrinters();
+        final impresora  = impresoras.firstWhere(
+          (p) => p.name == nombreImpresora,
+          orElse: () => throw Exception('Impresora "$nombreImpresora" no encontrada.'),
+        );
+        await Printing.directPrintPdf(
+          printer:  impresora,
+          onLayout: (_) async => pdfBytes,
+        );
+      } else {
+        await Printing.layoutPdf(onLayout: (_) async => pdfBytes);
+      }
+      if (mounted) _showSnack('Ticket reimpreso correctamente');
+    } catch (e) {
+      if (mounted) _showSnack('Error al reimprimir: $e', bg: Colors.red.shade600);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -328,6 +430,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
             onSelHasta: () => _seleccionarFecha(false),
             onBuscar:   _cargarHistorial,
             onAnular:   _anularDesdeHistorial,
+            onImprimir: _imprimirDesdeHistorial,
           ),
         ],
       ),
@@ -750,6 +853,7 @@ class _TabHistorial extends StatelessWidget {
   final VoidCallback onSelHasta;
   final VoidCallback onBuscar;
   final void Function(TicketModel) onAnular;
+  final void Function(TicketModel) onImprimir;
 
   const _TabHistorial({
     required this.desde,
@@ -760,6 +864,7 @@ class _TabHistorial extends StatelessWidget {
     required this.onSelHasta,
     required this.onBuscar,
     required this.onAnular,
+    required this.onImprimir,
   });
 
   @override
@@ -799,9 +904,10 @@ class _TabHistorial extends StatelessWidget {
 
         Expanded(
           child: _HistorialTabla(
-            historial: historial,
-            cargando:  cargando,
-            onAnular:  onAnular,
+            historial:  historial,
+            cargando:   cargando,
+            onAnular:   onAnular,
+            onImprimir: onImprimir,
           ),
         ),
       ],
@@ -1004,11 +1110,13 @@ class _HistorialTabla extends StatelessWidget {
   final List<TicketModel> historial;
   final bool cargando;
   final void Function(TicketModel) onAnular;
+  final void Function(TicketModel) onImprimir;
 
   const _HistorialTabla({
     required this.historial,
     required this.cargando,
     required this.onAnular,
+    required this.onImprimir,
   });
 
   @override
@@ -1050,9 +1158,10 @@ class _HistorialTabla extends StatelessWidget {
                             color: Colors.grey.shade100,
                           ),
                           itemBuilder: (_, i) => _HistorialRow(
-                            ticket:   historial[i],
-                            isEven:   i.isEven,
-                            onAnular: onAnular,
+                            ticket:     historial[i],
+                            isEven:     i.isEven,
+                            onAnular:   onAnular,
+                            onImprimir: onImprimir,
                           ),
                         ),
             ),
@@ -1134,11 +1243,13 @@ class _HistorialRow extends StatelessWidget {
   final TicketModel ticket;
   final bool isEven;
   final void Function(TicketModel) onAnular;
+  final void Function(TicketModel) onImprimir;
 
   const _HistorialRow({
     required this.ticket,
     required this.isEven,
     required this.onAnular,
+    required this.onImprimir,
   });
 
   @override
@@ -1270,13 +1381,27 @@ class _HistorialRow extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: anulado
                   ? const SizedBox.shrink()
-                  : IconButton(
-                      onPressed: () => onAnular(ticket),
-                      icon: Icon(Icons.cancel_outlined,
-                          size: 20, color: Colors.red.shade300),
-                      tooltip: 'Anular ticket',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () => onImprimir(ticket),
+                          icon: Icon(Icons.print_rounded,
+                              size: 20, color: _C.primary),
+                          tooltip: 'Reimprimir ticket',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => onAnular(ticket),
+                          icon: Icon(Icons.cancel_outlined,
+                              size: 20, color: Colors.red.shade300),
+                          tooltip: 'Anular ticket',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
                     ),
             ),
           ),
