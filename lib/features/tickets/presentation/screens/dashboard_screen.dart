@@ -715,16 +715,27 @@ class _TicketItem extends StatelessWidget {
     // ── Helpers ──────────────────────────────────────────────────────────
     pw.Widget divider() => pw.Divider(thickness: 0.5, height: 2);
 
-    pw.Widget fila(String label, String valor, {pw.TextStyle? style}) =>
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Text(label, style: style ?? styleNormal),
-            pw.Text(valor, style: style ?? styleNormal),
-          ],
-        );
+    pw.Widget fila(String label, String valor, {pw.TextStyle? style}) {
+    return pw.Row(
+      children: [
+        pw.Expanded(
+          child: pw.Text(
+            label,
+            style: style ?? styleNormal,
+            maxLines: 1,
+          ),
+        ),
+        pw.SizedBox(width: 5),
+        pw.Text(
+          valor,
+          style: style ?? styleNormal,
+        ),
+      ],
+    );
+  }
 
     final gap = pw.SizedBox(height: 0.5);
+    final hayDetalle = ticket.adultos > 0 || ticket.ninos > 0;
 
     // ── PDF ───────────────────────────────────────────────────────────────
     final pdf  = pw.Document();
@@ -733,7 +744,7 @@ class _TicketItem extends StatelessWidget {
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat(
-          58 * mmPt,
+          80 * mmPt,
           double.infinity,
           marginAll: 4 * mmPt,
         ),
@@ -758,24 +769,25 @@ class _TicketItem extends StatelessWidget {
             divider(),
 
             // DETALLE
-            if (ticket.adultos > 0) ...[
+
+            if (ticket.adultos > 0)
               fila(
                 'Adultos S/${precioAdulto.toStringAsFixed(2)} (x${ticket.adultos})',
                 'S/ ${(ticket.adultos * precioAdulto).toStringAsFixed(2)}',
               ),
-              gap,
-            ],
 
-            if (ticket.ninos > 0) ...[
+            if (ticket.ninos > 0)
               fila(
                 'Niños S/${precioNino.toStringAsFixed(2)} (x${ticket.ninos})',
                 'S/ ${(ticket.ninos * precioNino).toStringAsFixed(2)}',
               ),
-              gap,
+
+            if (hayDetalle) ...[
+              divider(),   
             ],
 
             // TOTAL
-            fila(
+           fila(
               'TOTAL',
               'S/ ${ticket.monto.toStringAsFixed(2)}',
               style: styleTotal,
@@ -783,16 +795,10 @@ class _TicketItem extends StatelessWidget {
             pw.SizedBox(height: 4),
 
             // PAGO
-            pw.Text(
-              'Pago: ${TicketModel.formatearParte(partesPago[0])}',
-              style: styleNormal,
-            ),
+            fila('Pago:', TicketModel.formatearParte(partesPago[0])),
             if (partesPago.length > 1) ...[
               gap,
-              pw.Text(
-                TicketModel.formatearParte(partesPago[1]),
-                style: styleNormal,
-              ),
+              fila('', TicketModel.formatearParte(partesPago[1])),
             ],
             pw.SizedBox(height: 4),
             divider(),
@@ -879,142 +885,182 @@ class _TicketItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final anulado       = ticket.anulado;
-    final hora          = _fmtHora.format(ticket.hora);
-    final totalPax      = ticket.adultos + ticket.ninos;
-    final metodos       = TicketModel.parsearMetodoPago(ticket.metodoPago);
-    final esEfectivo    = metodos.keys.length == 1 &&
-                          metodos.keys.first == 'efectivo';
+    final anulado = ticket.anulado;
+    final hora = _fmtHora.format(ticket.hora);
+    final totalPax = ticket.adultos + ticket.ninos;
+    final metodos = TicketModel.parsearMetodoPago(ticket.metodoPago);
+    final esEfectivo = metodos.keys.length == 1 &&
+        metodos.keys.first == 'efectivo';
 
-    final idBgColor      = anulado ? Colors.red.shade50   : _AppColors.primaryLight;
-    final idTextColor    = anulado ? Colors.red.shade400  : _AppColors.primary;
-    final mainTextColor  = anulado ? Colors.grey.shade400 : _AppColors.text;
-    final badgeBgColor   = anulado ? Colors.red.shade50   : _AppColors.greenLight;
-    final badgeTextColor = anulado ? Colors.red.shade400  : _AppColors.green;
+    final cfg = context.read<ConfigProvider>();
+    final weekday = ticket.hora.weekday;
+    final precioAdulto = ticket.adultos > 0 && ticket.ninos == 0
+        ? ticket.monto / ticket.adultos
+        : cfg.precioAdulto(weekday);
+    final precioNino = ticket.ninos > 0 && ticket.adultos == 0
+        ? ticket.monto / ticket.ninos
+        : cfg.precioNino(weekday);
+
+    final adultosTotal = ticket.adultos * precioAdulto;
+    final ninosTotal = ticket.ninos * precioNino;
+
+    final idBgColor = anulado ? Colors.red.shade50 : _AppColors.primaryLight;
+    final idTextColor = anulado ? Colors.red.shade400 : _AppColors.primary;
+    final mainTextColor = anulado ? Colors.grey.shade400 : _AppColors.text;
+    final badgeBgColor = anulado ? Colors.red.shade50 : _AppColors.greenLight;
+    final badgeTextColor = anulado ? Colors.red.shade400 : _AppColors.green;
     final textDecoration = anulado ? TextDecoration.lineThrough : null;
 
     return GestureDetector(
-      onTap:       anulado ? null : () => _mostrarOpciones(context),
+      onTap: anulado ? null : () => _mostrarOpciones(context),
       onLongPress: anulado ? null : () => _confirmarAnulacion(context),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: anulado ? AppColors.errorLight : Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           border: anulado ? Border.all(color: Colors.red.shade200) : null,
           boxShadow: [
             BoxShadow(
               color: (anulado ? Colors.red : _AppColors.primary)
-                  .withValues(alpha: 0.07),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+                  .withValues(alpha: 0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-
-              // ID badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: idBgColor,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '#${ticket.ticketId.toString().padLeft(4, '0')}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: idTextColor,
-                  ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: idBgColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '#${ticket.ticketId.toString().padLeft(4, '0')}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: idTextColor,
                 ),
               ),
-              const SizedBox(width: 12),
+            ),
+            const SizedBox(width: 10),
 
-              // Info central
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _paxLabel(ticket.adultos, ticket.ninos),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: mainTextColor,
-                        decoration: textDecoration,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _paxLabel(ticket.adultos, ticket.ninos),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: mainTextColor,
+                            decoration: textDecoration,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
+                      Text(
+                        hora,
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        esEfectivo ? Icons.money_rounded : Icons.phone_android_rounded,
+                        size: 12,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          metodos.keys.map(TicketModel.formatearParte).join(' + '),
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (ticket.adultos > 0 || ticket.ninos > 0) ...[
+                    const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(Icons.access_time_rounded,
-                            size: 11, color: Colors.grey.shade400),
-                        const SizedBox(width: 3),
+                        if (ticket.adultos > 0)
+                          Expanded(
+                            child: Text(
+                              'Adulto: S/ ${precioAdulto.toStringAsFixed(2)} ×${ticket.adultos}',
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                            ),
+                          ),
+                        if (ticket.ninos > 0)
+                          Expanded(
+                            child: Text(
+                              'Niño: S/ ${precioNino.toStringAsFixed(2)} ×${ticket.ninos}',
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Spacer(),
                         Text(
-                          hora,
+                          'Subtotal: S/ ${(adultosTotal + ninosTotal).toStringAsFixed(2)}',
                           style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade500),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          esEfectivo
-                              ? Icons.money_rounded
-                              : Icons.phone_android_rounded,
-                          size: 11,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          metodos.keys
-                              .map(TicketModel.formatearParte)
-                              .join(' + '),
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade500),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: mainTextColor,
+                          ),
                         ),
                       ],
                     ),
                   ],
-                ),
-              ),
-
-              // Monto + pax badge
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'S/ ${ticket.monto.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: mainTextColor,
-                      decoration: textDecoration,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: badgeBgColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      anulado ? 'ANULADO' : '$totalPax pax',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: badgeTextColor,
-                      ),
-                    ),
-                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+
+            const SizedBox(width: 8),
+
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'S/ ${ticket.monto.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: mainTextColor,
+                    decoration: textDecoration,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: badgeBgColor,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                    anulado ? 'ANULADO' : '$totalPax pax',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: badgeTextColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

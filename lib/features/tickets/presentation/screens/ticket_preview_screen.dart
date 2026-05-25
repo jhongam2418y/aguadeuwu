@@ -104,7 +104,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
 
     // Helper interno al método — no necesita ser un getter del estado
     pw.Widget pdfRow(String label, String value,
-        {bool bold = false, double fontSize = 11}) {
+        {bool bold = false, double fontSize = 10}) {
       final style = bold
           ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
           : pw.TextStyle(fontSize: fontSize);
@@ -135,19 +135,17 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pw.SizedBox(height: 4),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
-            if (_adultos > 0) ...[
-              pdfRow('Adultos (x$_adultos)',
-                  'S/ ${(_adultos * _precioAdulto).toStringAsFixed(2)}'),
-              pw.SizedBox(height: 1),
-            ],
+            pdfRow(
+              'Adultos S/${_precioAdulto.toStringAsFixed(2)} (x$_adultos)',
+              'S/ ${(_adultos * _precioAdulto).toStringAsFixed(2)}',
+            ),
             if (_ninos > 0) ...[
-              pdfRow('Niños (x$_ninos)',
-                  'S/ ${(_ninos * _precioNino).toStringAsFixed(2)}'),
-              pw.SizedBox(height: 1),
+              pdfRow(
+                'Niños S/${_precioNino.toStringAsFixed(2)} (x$_ninos)',
+                'S/ ${(_ninos * _precioNino).toStringAsFixed(2)}',
+              ),
             ],
             pw.Divider(thickness: 0.5, height: 2),
-            pw.SizedBox(height: 2),
-            pw.Divider(thickness: 1.5, height: 2),
             pw.SizedBox(height: 2),
             pdfRow('TOTAL:', 'S/ ${_total.toStringAsFixed(2)}',
                 bold: true, fontSize: 16),
