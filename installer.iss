@@ -1,7 +1,7 @@
 [Setup]
 AppId={{A1B2C3D4-1234-5678-ABCD-123456789ABC}}
 AppName=Piscigranja
-AppVersion=1.3.0
+AppVersion=1.3.2
 AppPublisher=Piscigranja System
 AppPublisherURL=
 AppSupportURL=

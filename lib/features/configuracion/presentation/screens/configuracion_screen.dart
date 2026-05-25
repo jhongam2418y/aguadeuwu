@@ -255,66 +255,70 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
     final fmtHora    = DateFormat('HH:mm');
     final partesPago = ticket.metodoPago.split('+');
 
-    final styleNormal = pw.TextStyle(fontSize: 7);
-    final styleTotal  = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold);
-    final styleHeader = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold);
+    pw.Widget divider() => pw.Divider(thickness: 0.5);
 
-    pw.Widget divider() => pw.Divider(thickness: 0.5, height: 2);
-    pw.Widget fila(String label, String valor, {pw.TextStyle? style}) {
+    pw.Widget pdfRow(String label, String valor,
+        {bool bold = false, double fontSize = 10}) {
+      final style = bold
+          ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
+          : pw.TextStyle(fontSize: fontSize);
       return pw.Row(
-        children: [
-          pw.Expanded(
-            child: pw.Text(label, style: style ?? styleNormal, maxLines: 1),
-          ),
-          pw.SizedBox(width: 5),
-          pw.Text(valor, style: style ?? styleNormal),
-        ],
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [pw.Text(label, style: style), pw.Text(valor, style: style)],
       );
     }
-
-    final gap = pw.SizedBox(height: 0.5);
-    final hayDetalle = ticket.adultos > 0 || ticket.ninos > 0;
 
     final pdf  = pw.Document();
     const mmPt = PdfPageFormat.mm;
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 4 * mmPt),
+        pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
         build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Center(child: pw.Text('PISCIGRANJA', style: styleHeader)),
-            pw.Center(child: pw.Text('BOLETERÍA',   style: styleNormal)),
+            pw.Text('PISCIGRANJA',
+                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 2),
+            pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
+            pw.SizedBox(height: 8),
+            divider(),
+            pw.SizedBox(height: 4),
+            pdfRow('NRO. TICKET:', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
+            pw.SizedBox(height: 3),
+            pdfRow('FECHA:', fmtFecha.format(ticket.hora)),
+            pw.SizedBox(height: 3),
+            pdfRow('HORA:', fmtHora.format(ticket.hora)),
             pw.SizedBox(height: 4),
             divider(),
-            gap,
-            fila('Ticket', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
-            gap,
-            fila('Fecha', fmtFecha.format(ticket.hora)),
-            gap,
-            fila('Hora',  fmtHora.format(ticket.hora)),
-            gap,
-            divider(),
+            pw.SizedBox(height: 4),
             if (ticket.adultos > 0)
-              fila(
-                'Adultos S/\${precioAdulto.toStringAsFixed(2)} (x\${ticket.adultos})',
-                'S/ \${(ticket.adultos * precioAdulto).toStringAsFixed(2)}',
+              pdfRow(
+                'Adultos S/${precioAdulto.toStringAsFixed(2)} (x${ticket.adultos})',
+                'S/ ${(ticket.adultos * precioAdulto).toStringAsFixed(2)}',
               ),
-            if (ticket.ninos > 0)
-              fila(
-                'Niños S/\${precioNino.toStringAsFixed(2)} (x\${ticket.ninos})',
-                'S/ \${(ticket.ninos * precioNino).toStringAsFixed(2)}',
+            if (ticket.ninos > 0) ...[
+              pw.SizedBox(height: 2),
+              pdfRow(
+                'Niños S/${precioNino.toStringAsFixed(2)} (x${ticket.ninos})',
+                'S/ ${(ticket.ninos * precioNino).toStringAsFixed(2)}',
               ),
-            if (hayDetalle) divider(),
-            fila('TOTAL', 'S/ \${ticket.monto.toStringAsFixed(2)}', style: styleTotal),
+            ],
+            pw.Divider(thickness: 0.5, height: 2),
+            pw.SizedBox(height: 2),
+            pdfRow('TOTAL:', 'S/ ${ticket.monto.toStringAsFixed(2)}',
+                bold: true, fontSize: 16),
             pw.SizedBox(height: 4),
-            fila('Pago:', TicketModel.formatearParte(partesPago[0])),
-            if (partesPago.length > 1) ...[gap, fila('', TicketModel.formatearParte(partesPago[1]))],
-            pw.SizedBox(height: 4),
+            pdfRow('Pago:', TicketModel.formatearParte(partesPago[0])),
+            if (partesPago.length > 1) ...[
+              pw.SizedBox(height: 2),
+              pdfRow('', TicketModel.formatearParte(partesPago[1])),
+            ],
+            pw.SizedBox(height: 8),
             divider(),
-            gap,
-            pw.Center(child: pw.Text('Gracias por su visita', style: styleNormal)),
+            pw.SizedBox(height: 6),
+            pw.Text('Gracias por su visita!',
+                style: const pw.TextStyle(fontSize: 10)),
           ],
         ),
       ),
