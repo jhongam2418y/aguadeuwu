@@ -124,17 +124,11 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
       pw.Page(
         pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
         build: (_) => pw.Stack(
+          alignment: pw.Alignment.center,
           children: [
-            pw.Positioned.fill(
-              child: pw.Center(
-                child: pw.Transform.rotate(
-                  angle: -math.pi / 6,
-                  child: pw.Opacity(
-                    opacity: 0.08,
-                    child: pw.Image(logoImage, width: 160),
-                  ),
-                ),
-              ),
+            pw.Opacity(
+              opacity: 0.13,
+              child: pw.Image(logoImage, width: 160),
             ),
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -649,17 +643,14 @@ class _TicketCard extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              // Marca de agua diagonal
+              // Marca de agua
               Positioned.fill(
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                   child: Center(
-                    child: Transform.rotate(
-                      angle: -math.pi / 6,
-                      child: Opacity(
-                        opacity: 0.08,
-                        child: Image.asset('assets/images/marcaDeAgua.png', width: 200),
-                      ),
+                    child: Opacity(
+                      opacity: 0.10,
+                      child: Image.asset('assets/images/marcaDeAgua.png', width: 200),
                     ),
                   ),
                 ),
