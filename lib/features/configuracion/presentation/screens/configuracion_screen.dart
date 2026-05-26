@@ -273,6 +273,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
 
     final logoData  = await rootBundle.load('assets/images/marcaDeAgua.png');
     final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    // Cargar fuente Story Script para encabezado del ticket (PDF)
+    final storyData = await rootBundle.load('assets/fonts/StoryScript-Regular.ttf');
+    final storyFont = pw.Font.ttf(storyData);
 
     pdf.addPage(
       pw.Page(
@@ -300,8 +303,13 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
                   child: pw.Image(logoImage, fit: pw.BoxFit.contain),
                 ),
                 pw.SizedBox(width: 6),
-                pw.Text('PISCIGRANJA',
-                    style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                pw.Expanded(
+                  child: pw.Text(
+                    'CENTRO RECREACIONAL TURISTICO "EL PARAISO DE ANDAHUASI"',
+                    style: pw.TextStyle(font: storyFont, fontSize: 12),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
               ],
             ),
             pw.SizedBox(height: 2),

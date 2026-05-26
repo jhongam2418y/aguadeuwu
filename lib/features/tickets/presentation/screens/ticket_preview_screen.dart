@@ -95,6 +95,9 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
     // Carga el logo para la marca de agua
     final logoData = await rootBundle.load('assets/images/marcaDeAgua.png');
     final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    // Carga la fuente Story Script para el encabezado del ticket (PDF)
+    final storyData = await rootBundle.load('assets/fonts/StoryScript-Regular.ttf');
+    final storyFont = pw.Font.ttf(storyData);
 
     // Número de ticket — disponible solo tras guardar
     String nroTicket = 'S/N';
@@ -145,8 +148,13 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                   child: pw.Image(logoImage, fit: pw.BoxFit.contain),
                 ),
                 pw.SizedBox(width: 6),
-                pw.Text('PISCIGRANJA',
-                    style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                pw.Expanded(
+                  child: pw.Text(
+                    'CENTRO RECREACIONAL TURISTICO "EL PARAISO DE ANDAHUASI"',
+                    style: pw.TextStyle(font: storyFont, fontSize: 12),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
               ],
             ),
             pw.SizedBox(height: 2),
@@ -694,13 +702,12 @@ class _TicketCard extends StatelessWidget {
                             'assets/images/marcaDeAgua.png', height: 44),
                         ),
                         const SizedBox(width: 10),
-                        const Text(
-                          'PISCIGRANJA',
+                        Text(
+                          'CENTRO RECREACIONAL TURISTICO "EL PARAISO DE ANDAHUASI"',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
+                          style: const TextStyle(
+                            fontFamily: 'StoryScript',
                             fontSize: 18,
-                            letterSpacing: 2.5,
                           ),
                         ),
                       ],
