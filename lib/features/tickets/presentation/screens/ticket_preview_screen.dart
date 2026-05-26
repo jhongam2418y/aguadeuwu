@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -21,9 +24,8 @@ abstract final class _C {
 }
 
 // Formateadores — instanciados una sola vez
-final _fmtFecha     = DateFormat('dd/MM/yyyy');
-final _fmtHora      = DateFormat('HH:mm');
-final _fmtFechaLarga = DateFormat("EEEE, d 'de' MMMM 'de' yyyy", 'es');
+final _fmtFecha = DateFormat('dd/MM/yyyy');
+final _fmtHora  = DateFormat('HH:mm');
 
 // =============================================================================
 // TicketPreviewScreen
@@ -90,6 +92,10 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
     const mmPt  = PdfPageFormat.mm;
     final partesPago = _metodoPago.split('+');
 
+    // Carga el logo para la marca de agua
+    final logoData = await rootBundle.load('assets/images/marcaDeAgua.png');
+    final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+
     // Número de ticket — disponible solo tras guardar
     String nroTicket = 'S/N';
     if (_ticketDbId != null) {
@@ -117,9 +123,22 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
-        build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
+        build: (_) => pw.Stack(
           children: [
+            pw.Positioned.fill(
+              child: pw.Center(
+                child: pw.Transform.rotate(
+                  angle: -math.pi / 6,
+                  child: pw.Opacity(
+                    opacity: 0.08,
+                    child: pw.Image(logoImage, width: 160),
+                  ),
+                ),
+              ),
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
             pw.Text('PISCIGRANJA',
                 style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 2),
@@ -160,6 +179,8 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pw.SizedBox(height: 6),
             pw.Text('Gracias por su visita!',
                 style: const pw.TextStyle(fontSize: 10)),
+          ],
+            ),
           ],
         ),
       ),
@@ -626,9 +647,26 @@ class _TicketCard extends StatelessWidget {
             borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
             boxShadow: [_shadow],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Stack(
             children: [
+              // Marca de agua diagonal
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                  child: Center(
+                    child: Transform.rotate(
+                      angle: -math.pi / 6,
+                      child: Opacity(
+                        opacity: 0.08,
+                        child: Image.asset('assets/images/marcaDeAgua.png', width: 200),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               // Franja superior azul
               const DecoratedBox(
                 decoration: BoxDecoration(
@@ -750,6 +788,8 @@ class _TicketCard extends StatelessWidget {
 
 
             ],
+              ),
+            ],
           ),
         ),
 
@@ -830,32 +870,6 @@ class _TicketRow extends StatelessWidget {
       ],
     );
   }
-}
-
-// =============================================================================
-// _BarcodePainter  — lista de anchos como const
-// =============================================================================
-class _BarcodePainter extends CustomPainter {
-  static const _bars = [
-    3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2, 1, 2, 4,
-    1, 3, 2, 1, 3, 2, 4, 1, 2, 3, 1, 2, 1, 3, 2, 1,
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.grey.shade700;
-    double x = 0;
-    bool draw = true;
-    for (final w in _bars) {
-      final barW = w * (size.width / 56);
-      if (draw) canvas.drawRect(Rect.fromLTWH(x, 0, barW, size.height), paint);
-      x += barW;
-      draw = !draw;
-    }
-  }
-
-  @override
-  bool shouldRepaint(_BarcodePainter _) => false;
 }
 
 // =============================================================================

@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -725,12 +728,29 @@ class _TicketItem extends StatelessWidget {
     final pdf  = pw.Document();
     const mmPt = PdfPageFormat.mm;
 
+    // Carga el logo para la marca de agua
+    final logoData = await rootBundle.load('assets/images/marcaDeAgua.png');
+    final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
-        build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
+        build: (_) => pw.Stack(
           children: [
+            pw.Positioned.fill(
+              child: pw.Center(
+                child: pw.Transform.rotate(
+                  angle: -math.pi / 6,
+                  child: pw.Opacity(
+                    opacity: 0.08,
+                    child: pw.Image(logoImage, width: 160),
+                  ),
+                ),
+              ),
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
             pw.Text('PISCIGRANJA',
                 style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 2),
@@ -773,6 +793,8 @@ class _TicketItem extends StatelessWidget {
             pw.SizedBox(height: 6),
             pw.Text('Gracias por su visita!',
                 style: const pw.TextStyle(fontSize: 10)),
+          ],
+            ),
           ],
         ),
       ),
@@ -865,9 +887,6 @@ class _TicketItem extends StatelessWidget {
     final precioNino = ticket.ninos > 0 && ticket.adultos == 0
         ? ticket.monto / ticket.ninos
         : cfg.precioNino(weekday);
-
-    final adultosTotal = ticket.adultos * precioAdulto;
-    final ninosTotal = ticket.ninos * precioNino;
 
     final idBgColor = anulado ? Colors.red.shade50 : _AppColors.primaryLight;
     final idTextColor = anulado ? Colors.red.shade400 : _AppColors.primary;
