@@ -356,6 +356,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
             style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
+            iconSize: 32,
             icon: Icon(_isFullScreen
                 ? Icons.fullscreen_exit_rounded
                 : Icons.fullscreen_rounded),
@@ -364,6 +365,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
           ),
           const SizedBox(width: 4),
           IconButton(
+            iconSize: 32,
             icon: const Icon(Icons.power_settings_new_rounded),
             tooltip: 'Salir',
             onPressed: () async {
