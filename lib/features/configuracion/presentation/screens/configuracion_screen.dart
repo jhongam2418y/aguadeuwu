@@ -271,14 +271,39 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
     final pdf  = pw.Document();
     const mmPt = PdfPageFormat.mm;
 
+    final logoData  = await rootBundle.load('assets/images/marcaDeAgua.png');
+    final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
+          buildBackground: (context) => pw.FullPage(
+            ignoreMargins: true,
+            child: pw.Center(
+              child: pw.Opacity(
+                opacity: 0.18,
+                child: pw.Image(logoImage, width: 160),
+              ),
+            ),
+          ),
+        ),
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Text('PISCIGRANJA',
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.SizedBox(
+                  width: 44, height: 44,
+                  child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                ),
+                pw.SizedBox(width: 6),
+                pw.Text('PISCIGRANJA',
+                    style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
             pw.SizedBox(height: 2),
             pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
             pw.SizedBox(height: 8),
@@ -356,7 +381,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
             style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            iconSize: 32,
+            iconSize: 34,
             icon: Icon(_isFullScreen
                 ? Icons.fullscreen_exit_rounded
                 : Icons.fullscreen_rounded),
@@ -365,7 +390,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
           ),
           const SizedBox(width: 4),
           IconButton(
-            iconSize: 32,
+            iconSize: 34,
             icon: const Icon(Icons.power_settings_new_rounded),
             tooltip: 'Salir',
             onPressed: () async {

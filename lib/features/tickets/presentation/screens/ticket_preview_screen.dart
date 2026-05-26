@@ -122,19 +122,33 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
-        build: (_) => pw.Stack(
-          alignment: pw.Alignment.center,
-          children: [
-            pw.Opacity(
-              opacity: 0.13,
-              child: pw.Image(logoImage, width: 160),
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
+          buildBackground: (context) => pw.FullPage(
+            ignoreMargins: true,
+            child: pw.Center(
+              child: pw.Opacity(
+                opacity: 0.18,
+                child: pw.Image(logoImage, width: 160),
+              ),
             ),
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
+          ),
+        ),
+        build: (_) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
               children: [
-            pw.Text('PISCIGRANJA',
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(
+                  width: 44, height: 44,
+                  child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                ),
+                pw.SizedBox(width: 6),
+                pw.Text('PISCIGRANJA',
+                    style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
             pw.SizedBox(height: 2),
             pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
             pw.SizedBox(height: 8),
@@ -173,8 +187,6 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pw.SizedBox(height: 6),
             pw.Text('Gracias por su visita!',
                 style: const pw.TextStyle(fontSize: 10)),
-          ],
-            ),
           ],
         ),
       ),
@@ -649,7 +661,7 @@ class _TicketCard extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                   child: Center(
                     child: Opacity(
-                      opacity: 0.10,
+                      opacity: 0.18,
                       child: Image.asset('assets/images/marcaDeAgua.png', width: 200),
                     ),
                   ),
@@ -668,21 +680,33 @@ class _TicketCard extends StatelessWidget {
               ),
 
               // Encabezado
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 18, 20, 12),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                 child: Column(
                   children: [
-                    Text(
-                      'PISCIGRANJA',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
-                        letterSpacing: 2.5,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ColorFiltered(
+                          colorFilter: const ColorFilter.mode(
+                            Colors.black87, BlendMode.srcIn),
+                          child: Image.asset(
+                            'assets/images/marcaDeAgua.png', height: 44),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'PISCIGRANJA',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            letterSpacing: 2.5,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 2),
-                    Text(
+                    const SizedBox(height: 2),
+                    const Text(
                       'Boleteria de Ingreso',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 11, color: Colors.grey),
