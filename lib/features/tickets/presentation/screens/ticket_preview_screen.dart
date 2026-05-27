@@ -124,7 +124,14 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
     pdf.addPage(
       pw.Page(
         pageTheme: pw.PageTheme(
-          pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
+          pageFormat: PdfPageFormat(
+            80 * mmPt,
+            double.infinity,
+            marginLeft: 12 * mmPt, // desplaza contenido hacia la derecha
+            marginRight: 4 * mmPt,
+            marginTop: 8 * mmPt,
+            marginBottom: 8 * mmPt,
+          ),
           buildBackground: (context) => pw.FullPage(
             ignoreMargins: true,
             child: pw.Center(
@@ -138,24 +145,27 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            // Encabezado: logo en esquina izquierda y título en dos líneas
+            // Encabezado: logo a la izquierda y título forzado en 2 líneas
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.SizedBox(width: 56, child: pw.Image(logoImage, fit: pw.BoxFit.contain)),
-                pw.SizedBox(width: 12),
+                // Reducimos un poco el logo para dar más ancho al título
+                pw.SizedBox(width: 44, child: pw.Image(logoImage, fit: pw.BoxFit.contain)),
+                pw.SizedBox(width: 8),
                 pw.Expanded(
                   child: pw.Column(
                     mainAxisSize: pw.MainAxisSize.min,
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
-                      pw.Text('CENTRO RECREACIONAL TURISTICO', style: pw.TextStyle(font: storyFont, fontSize: 12), textAlign: pw.TextAlign.center),
-                      pw.SizedBox(height: 2),
-                      pw.Text('EL PARAISO DE ANDAHUASI', style: pw.TextStyle(font: storyFont, fontSize: 12), textAlign: pw.TextAlign.center),
+                      pw.Text(
+                        'CENTRO RECREACIONAL TURISTICO\nEL PARAISO DE ANDAHUASI',
+                        style: pw.TextStyle(font: storyFont, fontSize: 10),
+                        textAlign: pw.TextAlign.center,
+                      ),
                     ],
                   ),
                 ),
-                pw.SizedBox(width: 56),
+                pw.SizedBox(width: 44),
               ],
             ),
             pw.SizedBox(height: 8),

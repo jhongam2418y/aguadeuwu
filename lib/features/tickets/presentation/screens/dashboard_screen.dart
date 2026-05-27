@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -711,8 +709,6 @@ class _TicketItem extends StatelessWidget {
     final partesPago = ticket.metodoPago.split('+');
 
     // ── Helpers PDF ───────────────────────────────────────────────────────
-    pw.Widget divider() => pw.Divider(thickness: 0.5);
-
     pw.Widget pdfRow(String label, String valor,
         {bool bold = false, double fontSize = 10}) {
       final style = bold
@@ -728,35 +724,60 @@ class _TicketItem extends StatelessWidget {
     final pdf  = pw.Document();
     const mmPt = PdfPageFormat.mm;
 
-    // Carga el logo para la marca de agua
+    // Carga el logo para la marca de agua y la fuente StoryScript (igual que impresión principal)
     final logoData = await rootBundle.load('assets/images/marcaDeAgua.png');
     final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    final storyData = await rootBundle.load('assets/fonts/StoryScript-Regular.ttf');
+    final storyFont = pw.Font.ttf(storyData);
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
-        build: (_) => pw.Stack(
-          children: [
-            pw.Positioned.fill(
-              child: pw.Center(
-                child: pw.Transform.rotate(
-                  angle: -math.pi / 6,
-                  child: pw.Opacity(
-                    opacity: 0.08,
-                    child: pw.Image(logoImage, width: 160),
-                  ),
-                ),
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat(
+            80 * mmPt,
+            double.infinity,
+            marginLeft: 12 * mmPt,
+            marginRight: 4 * mmPt,
+            marginTop: 8 * mmPt,
+            marginBottom: 8 * mmPt,
+          ),
+          buildBackground: (context) => pw.FullPage(
+            ignoreMargins: true,
+            child: pw.Center(
+              child: pw.Opacity(
+                opacity: 0.18,
+                child: pw.Image(logoImage, width: 160),
               ),
             ),
-            pw.Column(
+          ),
+        ),
+        build: (_) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            // Encabezado: logo, título en 2 líneas (StoryScript)
+            pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-            pw.Text('EL PARAISO DE ANDAHUASI',
-              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 2),
-            pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
+                pw.SizedBox(width: 44, child: pw.Image(logoImage, fit: pw.BoxFit.contain)),
+                pw.SizedBox(width: 8),
+                pw.Expanded(
+                  child: pw.Column(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'CENTRO RECREACIONAL TURISTICO\nEL PARAISO DE ANDAHUASI',
+                        style: pw.TextStyle(font: storyFont, fontSize: 10),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 44),
+              ],
+            ),
             pw.SizedBox(height: 8),
-            divider(),
+            pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
             pdfRow('NRO. TICKET:', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
             pw.SizedBox(height: 3),
@@ -764,7 +785,7 @@ class _TicketItem extends StatelessWidget {
             pw.SizedBox(height: 3),
             pdfRow('HORA:', fmtHora.format(ticket.hora)),
             pw.SizedBox(height: 4),
-            divider(),
+            pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
             if (ticket.adultos > 0)
               pdfRow(
@@ -772,7 +793,6 @@ class _TicketItem extends StatelessWidget {
                 'S/ ${(ticket.adultos * precioAdulto).toStringAsFixed(2)}',
               ),
             if (ticket.ninos > 0) ...[  
-              pw.SizedBox(height: 2),
               pdfRow(
                 'Niños S/${precioNino.toStringAsFixed(2)} (x${ticket.ninos})',
                 'S/ ${(ticket.ninos * precioNino).toStringAsFixed(2)}',
@@ -789,12 +809,10 @@ class _TicketItem extends StatelessWidget {
               pdfRow('', TicketModel.formatearParte(partesPago[1])),
             ],
             pw.SizedBox(height: 8),
-            divider(),
+            pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 6),
             pw.Text('Gracias por su visita!',
                 style: const pw.TextStyle(fontSize: 10)),
-          ],
-            ),
           ],
         ),
       ),
