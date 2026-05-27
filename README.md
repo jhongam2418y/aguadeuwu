@@ -1,6 +1,6 @@
-# Piscigranja — Boletería
+# El paraiso de andahuasi — Boletería
 
-Sistema de punto de venta (POS) para la emisión y gestión de tickets de entrada en una piscigranja. Desarrollado con Flutter para escritorio Windows, con soporte de impresión térmica, exportación de reportes y actualizaciones automáticas.
+Sistema de punto de venta (POS) para la emisión y gestión de tickets de entrada en El paraiso de andahuasi. Desarrollado con Flutter para escritorio Windows, con soporte de impresión térmica, exportación de reportes y actualizaciones automáticas.
 
 ---
 
@@ -94,7 +94,7 @@ flutter run -d windows
 flutter build windows --release
 ```
 
-Luego compilar el instalador con **Inno Setup** usando el script [`installer.iss`](installer.iss) incluido en el repositorio. El archivo resultante debe llamarse `PiscigranjaInstaller.exe` y adjuntarse al release de GitHub.
+Luego compilar el instalador con **Inno Setup** usando el script [`installer.iss`](installer.iss) incluido en el repositorio. El archivo resultante debe llamarse `ElParaisoDeAndahuasiInstaller.exe` y adjuntarse al release de GitHub.
 
 ---
 
@@ -104,7 +104,7 @@ La app consulta `https://api.github.com/repos/jhongam2418/aguadeuwu/releases/lat
 
 Para que el diálogo de actualización aparezca:
 1. Crear un nuevo release en GitHub con un tag **mayor** que la versión en `pubspec.yaml` (ej. `v1.0.1`)
-2. Adjuntar el instalador con el nombre exacto: **`PiscigranjaInstaller.exe`**
+2. Adjuntar el instalador con el nombre exacto: **`ElParaisoDeAndahuasiInstaller.exe`**
 
 ---
 
@@ -113,7 +113,7 @@ Para que el diálogo de actualización aparezca:
 La base de datos SQLite se almacena en:
 
 ```
-%LOCALAPPDATA%\Piscigranja\piscigranja.db
+%LOCALAPPDATA%\ElParaisoDeAndahuasi\elparaisodeandahuasi.db
 ```
 
 Contiene dos tablas: `tickets` (ventas del día) y `config` (precios e impresora).

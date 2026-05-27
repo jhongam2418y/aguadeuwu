@@ -1,17 +1,17 @@
 [Setup]
 AppId={{A1B2C3D4-1234-5678-ABCD-123456789ABC}}
-AppName=Piscigranja
-AppVersion=1.3.8
-AppPublisher=Piscigranja System
+AppName=El paraiso de andahuasi
+AppVersion=1.3.7
+AppPublisher=El paraiso de andahuasi System
 AppPublisherURL=
 AppSupportURL=
 AppUpdatesURL=
 
-DefaultDirName={autopf}\Piscigranja
-DefaultGroupName=Piscigranja
+DefaultDirName={autopf}\ElParaisoDeAndahuasi
+DefaultGroupName=El paraiso de andahuasi
 
 OutputDir=output
-OutputBaseFilename=PiscigranjaInstaller
+OutputBaseFilename=ElParaisoDeAndahuasiInstaller
 
 Compression=lzma
 SolidCompression=yes
@@ -33,15 +33,15 @@ Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; Group
 
 ; 🔥 BD persistente (NO se elimina al desinstalar)
 [Dirs]
-Name: "{localappdata}\Piscigranja"; Flags: uninsneveruninstall
+Name: "{localappdata}\ElParaisoDeAndahuasi"; Flags: uninsneveruninstall
 
 [Files]
 Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Piscigranja"; Filename: "{app}\piscigranja.exe"
-Name: "{group}\Desinstalar Piscigranja"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Piscigranja"; Filename: "{app}\piscigranja.exe"; Tasks: desktopicon
+Name: "{group}\El paraiso de andahuasi"; Filename: "{app}\elparaisodeandahuasi.exe"
+Name: "{group}\Desinstalar El paraiso de andahuasi"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\El paraiso de andahuasi"; Filename: "{app}\elparaisodeandahuasi.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\piscigranja.exe"; Description: "Ejecutar Piscigranja"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\elparaisodeandahuasi.exe"; Description: "Ejecutar El paraiso de andahuasi"; Flags: nowait postinstall skipifsilent

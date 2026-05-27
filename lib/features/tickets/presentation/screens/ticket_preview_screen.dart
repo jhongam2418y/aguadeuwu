@@ -415,7 +415,7 @@ class _PreviewHeader extends StatelessWidget {
       child: const Column(
         children: [
           Text(
-            'PISCIGRANJA',
+            'EL PARAISO DE ANDAHUASI',
             style: TextStyle(
               color: Colors.white,
               fontSize: 20,

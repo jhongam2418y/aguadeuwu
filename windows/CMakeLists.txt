@@ -1,13 +1,13 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
-project(piscigranja LANGUAGES CXX)
+project(el_paraiso_de_andahuasi LANGUAGES CXX)
 
 # Needed by the printing plugin to download pdfium without SSL errors
 set(CMAKE_TLS_VERIFY OFF)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "piscigranja")
+set(BINARY_NAME "elparaisodeandahuasi")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

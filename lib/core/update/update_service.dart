@@ -10,7 +10,7 @@ const String _kApiUrl =
     'https://api.github.com/repos/jhongam2418y/aguadeuwu/releases/latest';
 
 // Nombre exacto del asset .exe dentro del release de GitHub.
-const String _kAssetName = 'PiscigranjaInstaller.exe';
+const String _kAssetName = 'ElParaisoDeAndahuasiInstaller.exe';
 
 // =============================================================================
 // UpdateInfo — datos del release obtenido de GitHub
@@ -102,7 +102,7 @@ class UpdateService {
       // No hay actualización si la versión remota no supera la local.
       if (!_isNewer(tagName, currentVersion)) return null;
 
-      // Buscar el asset PiscigranjaInstaller.exe dentro de los assets del release.
+      // Buscar el asset ElParaisoDeAndahuasiInstaller.exe dentro de los assets del release.
       final assets = (json['assets'] as List<dynamic>? ?? []);
       final dynamic asset = assets.firstWhere(
         (a) => (a['name'] as String?) == _kAssetName,

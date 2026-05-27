@@ -67,8 +67,8 @@ class ExportService {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                pw.Text('PISCIGRANJA',
-                    style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                pw.Text('EL PARAISO DE ANDAHUASI',
+                  style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
                 pw.Text('Reporte de Ventas',
                     style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600)),
               ]),

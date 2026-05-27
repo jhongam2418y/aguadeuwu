@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:piscigranja/features/configuracion/data/models/config_model.dart';
+import 'package:el_paraiso_de_andahuasi/features/configuracion/data/models/config_model.dart';
 
 void main() {
   group('ConfigModel', () {

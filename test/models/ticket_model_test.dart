@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:piscigranja/features/tickets/data/models/ticket_model.dart';
+import 'package:el_paraiso_de_andahuasi/features/tickets/data/models/ticket_model.dart';
 
 void main() {
   final baseTime = DateTime(2026, 4, 1, 10, 30);

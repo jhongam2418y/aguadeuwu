@@ -250,7 +250,7 @@ class _TopBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'PISCIGRANJA',
+                'EL PARAISO DE ANDAHUASI',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -751,8 +751,8 @@ class _TicketItem extends StatelessWidget {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-            pw.Text('PISCIGRANJA',
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            pw.Text('EL PARAISO DE ANDAHUASI',
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 2),
             pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
             pw.SizedBox(height: 8),

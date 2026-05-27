@@ -28,5 +28,5 @@ Future<void> main() async {
     });
   }
   await initializeDateFormatting('es', null);
-  runApp(const PiscigranjaApp());
+  runApp(const ElParaisoDeAndahuasiApp());
 }

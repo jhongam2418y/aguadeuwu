@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:piscigranja/core/export/export_service.dart';
+import 'package:el_paraiso_de_andahuasi/core/export/export_service.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -698,8 +698,8 @@ class _TabImpresoraState extends State<_TabImpresora> {
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Text('PISCIGRANJA',
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            pw.Text('EL PARAISO DE ANDAHUASI',
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 2),
             pw.Text('PAGINA DE PRUEBA',
                 style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),

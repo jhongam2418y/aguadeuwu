@@ -8,11 +8,11 @@
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
   // Single-instance guard: only one copy of the app may run at a time.
-  const wchar_t* kMutexName = L"piscigranja_single_instance_mutex";
+  const wchar_t* kMutexName = L"elparaisodeandahuasi_single_instance_mutex";
   HANDLE mutex = ::CreateMutexW(nullptr, TRUE, kMutexName);
   if (mutex == nullptr || ::GetLastError() == ERROR_ALREADY_EXISTS) {
     // Another instance is running — bring its window to the foreground.
-    HWND existing = ::FindWindowW(nullptr, L"piscigranja");
+    HWND existing = ::FindWindowW(nullptr, L"El paraiso de andahuasi");
     if (existing) {
       if (::IsIconic(existing)) {
         ::ShowWindow(existing, SW_RESTORE);
@@ -45,7 +45,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"piscigranja", origin, size)) {
+  if (!window.Create(L"El paraiso de andahuasi", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

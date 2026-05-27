@@ -384,7 +384,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('PISCIGRANJA',
+                const Text('EL PARAISO DE ANDAHUASI',
                   style: TextStyle(
                       color: AppColors.lightGrey,
                       fontSize: 11,

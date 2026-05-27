@@ -20,7 +20,7 @@ class TicketRepository {
     late int ticketId;
 
     // Transacción atómica: inserta el registro y luego asigna
-    // ticket_id = 84000 + id (basado en autoincrement — nunca colisiona).
+    // ticket_id = id (comenzando desde 1).
     await db.transaction((txn) async {
       id = await txn.insert('tickets', {
         'ticket_id': 0,
@@ -30,7 +30,7 @@ class TicketRepository {
         'metodo_pago': metodoPago,
         'hora': ahora.toIso8601String(),
       });
-      ticketId = 84000 + id;
+      ticketId = id;
       await txn.update(
         'tickets',
         {'ticket_id': ticketId},

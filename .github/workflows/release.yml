@@ -100,7 +100,7 @@ jobs:
       - name: Verify installer output
         shell: pwsh
         run: |
-          $output = "output\PiscigranjaInstaller.exe"
+          $output = "output\ElParaisoDeAndahuasiInstaller.exe"
           if (-not (Test-Path $output)) {
             Write-Error "Instalador no encontrado en: $output"
             Write-Host "Contenido de output\:"
@@ -118,12 +118,12 @@ jobs:
           $date    = Get-Date -Format "yyyy-MM-dd"
 
           @"
-          ## Piscigranja v$version
+          ## El paraiso de andahuasi v$version
 
           Publicado: $date
 
           ### Instalación
-          1. Descarga ``PiscigranjaInstaller.exe``
+          1. Descarga ``ElParaisoDeAndahuasiInstaller.exe``
           2. Ejecuta el instalador como administrador
           3. Sigue el asistente de instalación
 
@@ -136,7 +136,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: output/PiscigranjaInstaller.exe
+          files: output/ElParaisoDeAndahuasiInstaller.exe
           body_path: release_notes.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}

@@ -1,11 +1,11 @@
 {
-    "name": "piscigranja",
-    "short_name": "piscigranja",
+    "name": "El paraiso de andahuasi",
+    "short_name": "El paraiso de andahuasi",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "El paraiso de andahuasi - Boletería (Flutter web)",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,4 +1,4 @@
-package com.example.piscigranja
+package com.example.paraisoandahuasi
 
 import io.flutter.embedding.android.FlutterActivity
 

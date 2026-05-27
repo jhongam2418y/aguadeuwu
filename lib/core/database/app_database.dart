@@ -43,18 +43,28 @@ class AppDatabase {
           'Asegúrate de ejecutar la app como usuario normal (no como SYSTEM).');
     }
 
-    // Construir la ruta del directorio de datos.
-    final dbDir = Directory(join(localAppData, 'Piscigranja'));
+    // Construir la ruta del directorio de datos (nuevo nombre).
+    final dbDir = Directory(join(localAppData, 'ElParaisoDeAndahuasi'));
+
+    // Migración simple: si existe la BD antigua y no existe la nueva, la copiamos.
+    final oldDbPath = join(localAppData, 'Piscigranja', 'piscigranja.db');
+    final newDbPath = join(dbDir.path, 'elparaisodeandahuasi.db');
 
     try {
-      // Crea la carpeta si no existe. recursive: true no lanza error si ya existe.
+      // Crear la carpeta si no existe.
       await dbDir.create(recursive: true);
+      // Si hay una BD antigua y no existe la nueva, copiarla para preservar datos.
+      final oldDbFile = File(oldDbPath);
+      final newDbFile = File(newDbPath);
+      if (await oldDbFile.exists() && !await newDbFile.exists()) {
+        await oldDbFile.copy(newDbPath);
+      }
     } on PathAccessException catch (e) {
       throw StateError(
           '[AppDatabase] Sin permisos para crear el directorio ${dbDir.path}: $e');
     }
 
-    final dbPath = join(dbDir.path, 'piscigranja.db');
+    final dbPath = newDbPath;
 
     try {
       return await openDatabase(
@@ -145,7 +155,7 @@ class AppDatabase {
   /// Ruta absoluta del archivo de base de datos activo.
   Future<String> get dbFilePath async {
     final localAppData = Platform.environment['LOCALAPPDATA']!;
-    return join(localAppData, 'Piscigranja', 'piscigranja.db');
+    return join(localAppData, 'ElParaisoDeAndahuasi', 'elparaisodeandahuasi.db');
   }
 
   /// Copia la BD activa al archivo [destino].
