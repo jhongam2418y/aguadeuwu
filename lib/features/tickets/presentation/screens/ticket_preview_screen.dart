@@ -132,24 +132,23 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
     pdf.addPage(
       pw.Page(
         pageTheme: pw.PageTheme(
-          pageFormat: PdfPageFormat(
+            pageFormat: PdfPageFormat(
             80 * mmPt,
             double.infinity,
             marginLeft: 2 * mmPt,
             marginRight: 2 * mmPt,
-            marginTop: 8 * mmPt,
+            marginTop: 2 * mmPt,
             marginBottom: 8 * mmPt,
           ),
         ),
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            // Encabezado: solo el logo centrado (agrandado)
-            pw.Center(child: pw.Image(logoImage, width: 200)),
+            // Encabezado: logo reducido para evitar espacio extra
+            pw.Center(child: pw.Image(logoImage, width: 120)),
 
-            // Espaciado reducido para ajustar alto total (eliminado)
+            // Sin espacio entre encabezado y contenido
             pw.SizedBox(height: 0),
-            pw.Divider(thickness: 0.5),
 
             // Datos principales
             pdfRow('NRO. TICKET:', nroTicket),
@@ -313,9 +312,10 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                         child: ColoredBox(
                           color: _C.panelBg,
                           child: Center(
-                            child: SingleChildScrollView(
+                              child: SingleChildScrollView(
+                              // Eliminamos padding exterior vertical para acercar el ticket
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 36, vertical: 28),
+                                horizontal: 36, vertical: 0),
                               child: LayoutBuilder(
                                 builder: (context, constraints) {
                                   // Ensure ticket never exceeds 340px but also
@@ -678,13 +678,13 @@ class _TicketCard extends StatelessWidget {
                   color: _C.primary,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
                 ),
-                child: SizedBox(height: 6),
+                child: SizedBox(height: 2),
               ),
 
               // Encabezado
               Padding(
                 // Reducimos el padding alrededor del logo para evitar espacios en blanco
-                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
                 child: Column(
                   children: [
                     // Encabezado responsivo y balanceado: logo a la izquierda,
@@ -695,20 +695,21 @@ class _TicketCard extends StatelessWidget {
                         final logoWidget = ColorFiltered(
                           colorFilter: const ColorFilter.mode(
                               Colors.black87, BlendMode.srcIn),
-                          child: Image.asset('assets/images/marcaDeAgua.png', height: 200),
+                          child: Image.asset('assets/images/marcaDeAgua.png', height: 120),
                         );
-                        // Mostrar sólo la imagen como encabezado (centrada)
-                        return Center(child: logoWidget);
+                        // Mostrar sólo la imagen como encabezado (alineada arriba)
+                        return Align(alignment: Alignment.topCenter, child: logoWidget);
                       },
                     ),
                   ],
                 ),
               ),
-              const _TicketDivider(),
+              Divider(thickness: 0.5, height: 0, indent: 16, endIndent: 16, color: Colors.grey.shade300),
 
               // Fecha / Hora / Tipo
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                // Reducimos el padding superior para acercar el contenido al título
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Column(
                   children: [
                     const _TicketRow(label: 'NRO. TICKET:', value: 'PENDIENTE'),
@@ -734,7 +735,7 @@ class _TicketCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const _TicketDivider(),
+              const SizedBox(height: 0),
 
               // Ítems
               Padding(
