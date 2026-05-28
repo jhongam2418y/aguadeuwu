@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -744,9 +745,11 @@ class _TicketItem extends StatelessWidget {
           buildBackground: (context) => pw.FullPage(
             ignoreMargins: true,
             child: pw.Center(
-              child: pw.Opacity(
-                opacity: 0.18,
-                child: pw.Image(logoImage, width: 160),
+              child: pw.LayoutBuilder(
+                builder: (ctx, constraints) => pw.Opacity(
+                  opacity: 0.18,
+                  child: pw.Image(logoImage, width: math.min(160.0, constraints?.maxWidth ?? 160.0)),
+                ),
               ),
             ),
           ),

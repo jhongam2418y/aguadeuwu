@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -127,17 +128,19 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
           pageFormat: PdfPageFormat(
             80 * mmPt,
             double.infinity,
-            marginLeft: 12 * mmPt, // desplaza contenido hacia la derecha
-            marginRight: 4 * mmPt,
+            marginLeft: 2 * mmPt,
+            marginRight: 2 * mmPt,
             marginTop: 8 * mmPt,
             marginBottom: 8 * mmPt,
           ),
           buildBackground: (context) => pw.FullPage(
             ignoreMargins: true,
             child: pw.Center(
-              child: pw.Opacity(
-                opacity: 0.18,
-                child: pw.Image(logoImage, width: 160),
+              child: pw.LayoutBuilder(
+                builder: (ctx, constraints) => pw.Opacity(
+                  opacity: 0.18,
+                  child: pw.Image(logoImage, width: math.min(160.0, constraints?.maxWidth ?? 160.0)),
+                ),
               ),
             ),
           ),
@@ -330,18 +333,28 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                             child: SingleChildScrollView(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 36, vertical: 28),
-                              child: SizedBox(
-                                width: 340,
-                                child: _TicketCard(
-                                  adultos:      _adultos,
-                                  ninos:        _ninos,
-                                  precioAdulto: _precioAdulto,
-                                  precioNino:   _precioNino,
-                                  total:        _total,
-                                  fecha:        _fecha,
-                                  hora:         _hora,
-                                  metodoPago:   _metodoPago,
-                                ),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  // Ensure ticket never exceeds 340px but also
+                                  // shrinks to fit smaller available widths.
+                                  final maxW = constraints.maxWidth.isFinite
+                                      ? constraints.maxWidth
+                                      : 340.0;
+                                  final width = math.min(340.0, maxW);
+                                  return SizedBox(
+                                    width: width,
+                                    child: _TicketCard(
+                                      adultos:      _adultos,
+                                      ninos:        _ninos,
+                                      precioAdulto: _precioAdulto,
+                                      precioNino:   _precioNino,
+                                      total:        _total,
+                                      fecha:        _fecha,
+                                      hora:         _hora,
+                                      metodoPago:   _metodoPago,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ),
