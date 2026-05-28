@@ -117,8 +117,12 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
           ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
           : pw.TextStyle(fontSize: fontSize);
       return pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [pw.Text(label, style: style), pw.Text(value, style: style)],
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Expanded(child: pw.Text(label, style: style)),
+          pw.SizedBox(width: 8),
+          pw.Container(alignment: pw.Alignment.centerRight, child: pw.Text(value, style: style)),
+        ],
       );
     }
 
@@ -152,7 +156,6 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                // Reducimos un poco el logo para dar más ancho al título
                 pw.SizedBox(width: 44, child: pw.Image(logoImage, fit: pw.BoxFit.contain)),
                 pw.SizedBox(width: 8),
                 pw.Expanded(
@@ -162,7 +165,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                     children: [
                       pw.Text(
                         'CENTRO RECREACIONAL TURISTICO\nEL PARAISO DE ANDAHUASI',
-                        style: pw.TextStyle(font: storyFont, fontSize: 10),
+                        style: pw.TextStyle(font: storyFont, fontSize: 13),
                         textAlign: pw.TextAlign.center,
                       ),
                     ],
@@ -171,17 +174,22 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                 pw.SizedBox(width: 44),
               ],
             ),
-            pw.SizedBox(height: 8),
-            pw.Divider(thickness: 0.5),
+
+            // Espaciado reducido para ajustar alto total
             pw.SizedBox(height: 4),
+            pw.Divider(thickness: 0.5),
+
+            // Datos principales
             pdfRow('NRO. TICKET:', nroTicket),
-            pw.SizedBox(height: 3),
+            pw.SizedBox(height: 2),
             pdfRow('FECHA:', _fecha),
-            pw.SizedBox(height: 3),
+            pw.SizedBox(height: 2),
             pdfRow('HORA:', _hora),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 2),
             pw.Divider(thickness: 0.5),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 2),
+
+            // Precios
             pdfRow(
               'Adultos S/${_precioAdulto.toStringAsFixed(2)} (x$_adultos)',
               'S/ ${(_adultos * _precioAdulto).toStringAsFixed(2)}',
@@ -192,21 +200,24 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                 'S/ ${(_ninos * _precioNino).toStringAsFixed(2)}',
               ),
             ],
+
             pw.Divider(thickness: 0.5, height: 2),
             pw.SizedBox(height: 2),
-            pdfRow('TOTAL:', 'S/ ${_total.toStringAsFixed(2)}',
-                bold: true, fontSize: 16),
-            pw.SizedBox(height: 4),
+
+            // Total y pago
+            pdfRow('TOTAL:', 'S/ ${_total.toStringAsFixed(2)}', bold: true, fontSize: 16),
+            pw.SizedBox(height: 2),
             pdfRow('Pago:', TicketModel.formatearParte(partesPago[0])),
             if (partesPago.length > 1) ...[
               pw.SizedBox(height: 2),
               pdfRow('', TicketModel.formatearParte(partesPago[1])),
             ],
-            pw.SizedBox(height: 8),
+
+            // Pie
+            pw.SizedBox(height: 4),
             pw.Divider(thickness: 0.5),
-            pw.SizedBox(height: 6),
-            pw.Text('Gracias por su visita!',
-                style: const pw.TextStyle(fontSize: 10)),
+            pw.SizedBox(height: 4),
+            pw.Text('Gracias por su visita!', style: const pw.TextStyle(fontSize: 10)),
           ],
         ),
       ),

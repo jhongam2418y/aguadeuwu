@@ -716,8 +716,17 @@ class _TicketItem extends StatelessWidget {
           ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
           : pw.TextStyle(fontSize: fontSize);
       return pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [pw.Text(label, style: style), pw.Text(valor, style: style)],
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Expanded(
+            child: pw.Text(label, style: style),
+          ),
+          pw.SizedBox(width: 8),
+          pw.Container(
+            alignment: pw.Alignment.centerRight,
+            child: pw.Text(valor, style: style),
+          ),
+        ],
       );
     }
 
@@ -737,8 +746,8 @@ class _TicketItem extends StatelessWidget {
           pageFormat: PdfPageFormat(
             80 * mmPt,
             double.infinity,
-            marginLeft: 12 * mmPt,
-            marginRight: 4 * mmPt,
+            marginLeft: 2 * mmPt,
+            marginRight: 2 * mmPt,
             marginTop: 8 * mmPt,
             marginBottom: 8 * mmPt,
           ),
@@ -770,7 +779,7 @@ class _TicketItem extends StatelessWidget {
                     children: [
                       pw.Text(
                         'CENTRO RECREACIONAL TURISTICO\nEL PARAISO DE ANDAHUASI',
-                        style: pw.TextStyle(font: storyFont, fontSize: 10),
+                        style: pw.TextStyle(font: storyFont, fontSize: 13),
                         textAlign: pw.TextAlign.center,
                       ),
                     ],
@@ -779,17 +788,16 @@ class _TicketItem extends StatelessWidget {
                 pw.SizedBox(width: 44),
               ],
             ),
-            pw.SizedBox(height: 8),
-            pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 4),
+            pw.Divider(thickness: 0.5),
             pdfRow('NRO. TICKET:', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
-            pw.SizedBox(height: 3),
+            pw.SizedBox(height: 2),
             pdfRow('FECHA:', fmtFecha.format(ticket.hora)),
-            pw.SizedBox(height: 3),
+            pw.SizedBox(height: 2),
             pdfRow('HORA:', fmtHora.format(ticket.hora)),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 2),
             pw.Divider(thickness: 0.5),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 2),
             if (ticket.adultos > 0)
               pdfRow(
                 'Adultos S/${precioAdulto.toStringAsFixed(2)} (x${ticket.adultos})',
@@ -805,7 +813,7 @@ class _TicketItem extends StatelessWidget {
             pw.SizedBox(height: 2),
             pdfRow('TOTAL:', 'S/ ${ticket.monto.toStringAsFixed(2)}',
                 bold: true, fontSize: 16),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 2),
             pdfRow('Pago:', TicketModel.formatearParte(partesPago[0])),
             if (partesPago.length > 1) ...[
               pw.SizedBox(height: 2),
