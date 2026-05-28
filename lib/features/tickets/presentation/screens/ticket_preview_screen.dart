@@ -119,7 +119,12 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
         children: [
           pw.Expanded(child: pw.Text(label, style: style)),
           pw.SizedBox(width: 8),
-          pw.Container(alignment: pw.Alignment.centerRight, child: pw.Text(value, style: style)),
+          pw.Expanded(
+            child: pw.Container(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Text(value, style: style),
+            ),
+          ),
         ],
       );
     }

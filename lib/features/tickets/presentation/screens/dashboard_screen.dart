@@ -718,13 +718,10 @@ class _TicketItem extends StatelessWidget {
       return pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Expanded(
-            child: pw.Text(label, style: style),
-          ),
+          pw.Expanded(child: pw.Text(label, style: style)),
           pw.SizedBox(width: 8),
-          pw.Container(
-            alignment: pw.Alignment.centerRight,
-            child: pw.Text(valor, style: style),
+          pw.Expanded(
+            child: pw.Container(alignment: pw.Alignment.centerRight, child: pw.Text(valor, style: style)),
           ),
         ],
       );
@@ -766,6 +763,7 @@ class _TicketItem extends StatelessWidget {
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
+
             // Encabezado: logo, título en 2 líneas (StoryScript)
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.center,

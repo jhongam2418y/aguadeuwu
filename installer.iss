@@ -1,7 +1,7 @@
 [Setup]
 AppId={{A1B2C3D4-1234-5678-ABCD-123456789ABC}}
 AppName=El paraiso de andahuasi
-AppVersion=1.4.2
+AppVersion=1.4.3
 AppPublisher=El paraiso de andahuasi System
 AppPublisherURL=
 AppSupportURL=

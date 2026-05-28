@@ -370,7 +370,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
         final impresoras = await Printing.listPrinters();
         final impresora  = impresoras.firstWhere(
           (p) => p.name == nombreImpresora,
-          orElse: () => throw Exception('Impresora "$nombreImpresora" no encontrada.'),
+          orElse: () => throw Exception('Impresora "${nombreImpresora}" no encontrada.'),
         );
         await Printing.directPrintPdf(
           printer:  impresora,
