@@ -121,7 +121,12 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
         children: [
           pw.Expanded(child: pw.Text(label, style: style)),
           pw.SizedBox(width: 8),
-          pw.Container(alignment: pw.Alignment.centerRight, child: pw.Text(value, style: style)),
+          pw.Expanded(
+            child: pw.Container(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Text(value, style: style),
+            ),
+          ),
         ],
       );
     }
@@ -152,6 +157,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
+
             // Encabezado: logo a la izquierda y título forzado en 2 líneas
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
