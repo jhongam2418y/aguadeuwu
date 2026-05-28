@@ -86,7 +86,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
 
   // ── PDF ────────────────────────────────────────────────────────────────────
 
-  Future<pw.Document> _buildPdf() async {
+  Future<pw.Document> _buildPdf([PdfPageFormat? pageFormat]) async {
     final pdf   = pw.Document();
     const mmPt  = PdfPageFormat.mm;
     final partesPago = _metodoPago.split('+');
@@ -129,23 +129,29 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
       );
     }
 
+    // Use the supplied pageFormat (from the printer) when available so the
+    // generated PDF matches the printer's printable area and avoids cropping.
+    final pageFmt = pageFormat ?? PdfPageFormat(
+      80 * mmPt,
+      double.infinity,
+      marginLeft: 2 * mmPt,
+      marginRight: 2 * mmPt,
+      marginTop: 2 * mmPt,
+      marginBottom: 8 * mmPt,
+    );
+
     pdf.addPage(
       pw.Page(
-        pageTheme: pw.PageTheme(
-            pageFormat: PdfPageFormat(
-            80 * mmPt,
-            double.infinity,
-            marginLeft: 2 * mmPt,
-            marginRight: 2 * mmPt,
-            marginTop: 2 * mmPt,
-            marginBottom: 8 * mmPt,
-          ),
-        ),
+        pageTheme: pw.PageTheme(pageFormat: pageFmt),
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            // Encabezado: logo reducido para evitar espacio extra
-            pw.Center(child: pw.Image(logoImage, width: 120)),
+            // Encabezado responsivo: usa el ancho disponible para evitar overflow
+            pw.LayoutBuilder(builder: (ctx, constraints) {
+              final maxW = constraints?.maxWidth ?? 200.0;
+              final logoW = maxW * 0.92;
+              return pw.Center(child: pw.Image(logoImage, width: logoW));
+            }),
 
             // Sin espacio entre encabezado y contenido
             pw.SizedBox(height: 0),
@@ -208,24 +214,29 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
         if (_ticketDbId == null) throw Exception('No se pudo guardar el ticket.');
         setState(() => _guardado = true);
       }
-      final pdf = await _buildPdf();
-      final pdfBytes = await pdf.save();
-
+      // Generar el PDF dentro del callback `onLayout` que recibe el
+      // `PdfPageFormat` real que usa la impresora. Esto evita recortes
+      // cuando el ancho disponible es menor al esperado.
       if (nombreImpresora.isNotEmpty) {
-        // Buscar la impresora por nombre y enviar directo
         final impresoras = await Printing.listPrinters();
         final impresora = impresoras.firstWhere(
           (p) => p.name == nombreImpresora,
           orElse: () => throw Exception(
-              'Impresora "$nombreImpresora" no encontrada. Verifica el nombre en Configuración.'),
+              'Impresora "${nombreImpresora}" no encontrada. Verifica el nombre en Configuración.'),
         );
         await Printing.directPrintPdf(
           printer: impresora,
-          onLayout: (_) async => pdfBytes,
+          onLayout: (PdfPageFormat format) async {
+            final pdf = await _buildPdf(format);
+            return pdf.save();
+          },
         );
       } else {
         // Sin impresora configurada: abrir diálogo del sistema
-        await Printing.layoutPdf(onLayout: (_) async => pdfBytes);
+        await Printing.layoutPdf(onLayout: (PdfPageFormat format) async {
+          final pdf = await _buildPdf(format);
+          return pdf.save();
+        });
       }
 
       _showSnack('Ticket impreso correctamente');
