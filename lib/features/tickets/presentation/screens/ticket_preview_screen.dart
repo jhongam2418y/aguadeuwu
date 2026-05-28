@@ -144,11 +144,11 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            // Encabezado: solo el logo centrado
-            pw.Center(child: pw.Image(logoImage, width: 44)),
+            // Encabezado: solo el logo centrado (agrandado)
+            pw.Center(child: pw.Image(logoImage, width: 200)),
 
-            // Espaciado reducido para ajustar alto total
-            pw.SizedBox(height: 4),
+            // Espaciado reducido para ajustar alto total (eliminado)
+            pw.SizedBox(height: 0),
             pw.Divider(thickness: 0.5),
 
             // Datos principales
@@ -683,9 +683,8 @@ class _TicketCard extends StatelessWidget {
 
               // Encabezado
               Padding(
-                // Reducimos el padding izquierdo para que el logo quede más
-                // pegado a la esquina izquierda del ticket preview.
-                padding: const EdgeInsets.fromLTRB(8, 18, 8, 12),
+                // Reducimos el padding alrededor del logo para evitar espacios en blanco
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
                 child: Column(
                   children: [
                     // Encabezado responsivo y balanceado: logo a la izquierda,
@@ -696,7 +695,7 @@ class _TicketCard extends StatelessWidget {
                         final logoWidget = ColorFiltered(
                           colorFilter: const ColorFilter.mode(
                               Colors.black87, BlendMode.srcIn),
-                          child: Image.asset('assets/images/marcaDeAgua.png', height: 44),
+                          child: Image.asset('assets/images/marcaDeAgua.png', height: 200),
                         );
                         // Mostrar sólo la imagen como encabezado (centrada)
                         return Center(child: logoWidget);
@@ -853,6 +852,7 @@ class _TicketDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Divider(
       thickness: thick ? 1.5 : 0.8,
+      height: thick ? 6 : 2,
       indent: 16,
       endIndent: 16,
       color: Colors.grey.shade300,
