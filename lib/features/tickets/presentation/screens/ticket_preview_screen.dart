@@ -11,6 +11,7 @@ import '../../../../core/app_colors.dart';
 import '../../../configuracion/presentation/providers/config_provider.dart';
 import '../../data/models/ticket_model.dart';
 import '../providers/ticket_provider.dart';
+import '../helpers/ticket_pdf_builder.dart';
 
 // ─── Constantes de diseño — aliases a AppColors (fuente única de verdad) ─────
 abstract final class _C {
@@ -87,8 +88,6 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
   // ── PDF ────────────────────────────────────────────────────────────────────
 
   Future<pw.Document> _buildPdf([PdfPageFormat? pageFormat]) async {
-    final pdf   = pw.Document();
-    const mmPt  = PdfPageFormat.mm;
     final partesPago = _metodoPago.split('+');
 
     // Número de ticket — disponible solo tras guardar
@@ -103,103 +102,18 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
       }
     }
 
-    // Carga el logo para la marca de agua
-    final logoData = await rootBundle.load('assets/images/marcaDeAgua.png');
-    final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
-    // Nota: ya no se usa fuente para el título del ticket (se usará la imagen)
-
-    // Helper interno al método — no necesita ser un getter del estado
-    pw.Widget pdfRow(String label, String value,
-        {bool bold = false, double fontSize = 10}) {
-      final style = bold
-          ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
-          : pw.TextStyle(fontSize: fontSize);
-      return pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Expanded(child: pw.Text(label, style: style)),
-          pw.SizedBox(width: 8),
-          pw.Expanded(
-            child: pw.Container(
-              alignment: pw.Alignment.centerRight,
-              child: pw.Text(value, style: style),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Use the supplied pageFormat (from the printer) when available so the
-    // generated PDF matches the printer's printable area and avoids cropping.
-    final pageFmt = pageFormat ?? PdfPageFormat(
-      80 * mmPt,
-      double.infinity,
-      marginLeft: 2 * mmPt,
-      marginRight: 2 * mmPt,
-      marginTop: 2 * mmPt,
-      marginBottom: 8 * mmPt,
+    return await buildTicketPdfFromValues(
+      adultos: _adultos,
+      ninos: _ninos,
+      precioAdulto: _precioAdulto,
+      precioNino: _precioNino,
+      total: _total,
+      fecha: _fecha,
+      hora: _hora,
+      metodoPago: _metodoPago,
+      nroTicket: nroTicket,
+      pageFormat: pageFormat,
     );
-
-    pdf.addPage(
-      pw.Page(
-        pageTheme: pw.PageTheme(pageFormat: pageFmt),
-        build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
-          children: [
-            // Encabezado responsivo: usa el ancho disponible para evitar overflow
-            pw.LayoutBuilder(builder: (ctx, constraints) {
-              final maxW = constraints?.maxWidth ?? 200.0;
-              final logoW = maxW * 0.92;
-              return pw.Center(child: pw.Image(logoImage, width: logoW));
-            }),
-
-            // Sin espacio entre encabezado y contenido
-            pw.SizedBox(height: 0),
-
-            // Datos principales
-            pdfRow('NRO. TICKET:', nroTicket),
-            pw.SizedBox(height: 2),
-            pdfRow('FECHA:', _fecha),
-            pw.SizedBox(height: 2),
-            pdfRow('HORA:', _hora),
-            pw.SizedBox(height: 2),
-            pw.Divider(thickness: 0.5),
-            pw.SizedBox(height: 2),
-
-            // Precios
-            pdfRow(
-              'Adultos S/${_precioAdulto.toStringAsFixed(2)} (x$_adultos)',
-              'S/ ${(_adultos * _precioAdulto).toStringAsFixed(2)}',
-            ),
-            if (_ninos > 0) ...[
-              pdfRow(
-                'Niños S/${_precioNino.toStringAsFixed(2)} (x$_ninos)',
-                'S/ ${(_ninos * _precioNino).toStringAsFixed(2)}',
-              ),
-            ],
-
-            pw.Divider(thickness: 0.5, height: 2),
-            pw.SizedBox(height: 2),
-
-            // Total y pago
-            pdfRow('TOTAL:', 'S/ ${_total.toStringAsFixed(2)}', bold: true, fontSize: 16),
-            pw.SizedBox(height: 2),
-            pdfRow('Pago:', TicketModel.formatearParte(partesPago[0])),
-            if (partesPago.length > 1) ...[
-              pw.SizedBox(height: 2),
-              pdfRow('', TicketModel.formatearParte(partesPago[1])),
-            ],
-
-            // Pie
-            pw.SizedBox(height: 4),
-            pw.Divider(thickness: 0.5),
-            pw.SizedBox(height: 4),
-            pw.Text('Gracias por su visita!', style: const pw.TextStyle(fontSize: 10)),
-          ],
-        ),
-      ),
-    );
-    return pdf;
   }
 
   // ── Acciones ───────────────────────────────────────────────────────────────
@@ -531,9 +445,9 @@ class _ActionsCard extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: isLoading ? null : onImprimir,
             icon: const Icon(Icons.print_rounded, size: 26),
-            label: const Text(
-              'Imprimir Ticket',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            label: Text(
+              guardado ? 'Reimprimir' : 'Imprimir',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
             style: _printStyle,
           ),
@@ -689,7 +603,7 @@ class _TicketCard extends StatelessWidget {
                   color: _C.primary,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
                 ),
-                child: SizedBox(height: 2),
+                child: SizedBox(height: 1),
               ),
 
               // Encabezado
@@ -706,7 +620,7 @@ class _TicketCard extends StatelessWidget {
                         final logoWidget = ColorFiltered(
                           colorFilter: const ColorFilter.mode(
                               Colors.black87, BlendMode.srcIn),
-                          child: Image.asset('assets/images/marcaDeAgua.png', height: 120),
+                          child: Image.asset('assets/images/marcaDeAgua.png', height: 80),
                         );
                         // Mostrar sólo la imagen como encabezado (alineada arriba)
                         return Align(alignment: Alignment.topCenter, child: logoWidget);
@@ -720,7 +634,7 @@ class _TicketCard extends StatelessWidget {
               // Fecha / Hora / Tipo
               Padding(
                 // Reducimos el padding superior para acercar el contenido al título
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
                 child: Column(
                   children: [
                     const _TicketRow(label: 'NRO. TICKET:', value: 'PENDIENTE'),
@@ -750,7 +664,7 @@ class _TicketCard extends StatelessWidget {
 
               // Ítems
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Column(
                   children: [
                     if (adultos > 0)
