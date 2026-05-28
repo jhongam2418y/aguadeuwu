@@ -106,9 +106,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
     // Carga el logo para la marca de agua
     final logoData = await rootBundle.load('assets/images/marcaDeAgua.png');
     final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
-    // Carga la fuente Story Script para el encabezado del ticket (PDF)
-    final storyData = await rootBundle.load('assets/fonts/StoryScript-Regular.ttf');
-    final storyFont = pw.Font.ttf(storyData);
+    // Nota: ya no se usa fuente para el título del ticket (se usará la imagen)
 
     // Helper interno al método — no necesita ser un getter del estado
     pw.Widget pdfRow(String label, String value,
@@ -137,43 +135,12 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
             marginTop: 8 * mmPt,
             marginBottom: 8 * mmPt,
           ),
-          buildBackground: (context) => pw.FullPage(
-            ignoreMargins: true,
-            child: pw.Center(
-              child: pw.LayoutBuilder(
-                builder: (ctx, constraints) => pw.Opacity(
-                  opacity: 0.18,
-                  child: pw.Image(logoImage, width: math.min(160.0, constraints?.maxWidth ?? 160.0)),
-                ),
-              ),
-            ),
-          ),
         ),
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            // Encabezado: logo a la izquierda y título forzado en 2 líneas
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.SizedBox(width: 44, child: pw.Image(logoImage, fit: pw.BoxFit.contain)),
-                pw.SizedBox(width: 8),
-                pw.Expanded(
-                  child: pw.Column(
-                    mainAxisSize: pw.MainAxisSize.min,
-                    crossAxisAlignment: pw.CrossAxisAlignment.center,
-                    children: [
-                      pw.Text(
-                        'CENTRO RECREACIONAL TURISTICO\nEL PARAISO DE ANDAHUASI',
-                        style: pw.TextStyle(font: storyFont, fontSize: 13),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(width: 44),
-              ],
-            ),
+            // Encabezado: solo el logo centrado
+            pw.Center(child: pw.Image(logoImage, width: 44)),
 
             // Espaciado reducido para ajustar alto total
             pw.SizedBox(height: 4),
@@ -696,18 +663,7 @@ class _TicketCard extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              // Marca de agua
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                  child: Center(
-                    child: Opacity(
-                      opacity: 0.18,
-                      child: Image.asset('assets/images/marcaDeAgua.png', width: 200),
-                    ),
-                  ),
-                ),
-              ),
+              // Marca de agua: eliminada (se usará sólo en el encabezado)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -732,67 +688,13 @@ class _TicketCard extends StatelessWidget {
                     // que el título quede visualmente centrado.
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final isNarrow = constraints.maxWidth < 320;
                         final logoWidget = ColorFiltered(
                           colorFilter: const ColorFilter.mode(
                               Colors.black87, BlendMode.srcIn),
                           child: Image.asset('assets/images/marcaDeAgua.png', height: 44),
                         );
-                        // Unificamos tamaño de ambas líneas y colocamos el logo
-                        // en la esquina izquierda para aprovechar el espacio.
-                        final titleStyle = const TextStyle(
-                          fontFamily: 'StoryScript',
-                          fontSize: 16,
-                        );
-                        final topLine = Text(
-                          'CENTRO RECREACIONAL TURISTICO',
-                          textAlign: TextAlign.center,
-                          style: titleStyle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        );
-                        final bottomLine = Text(
-                          'EL PARAISO DE ANDAHUASI',
-                          textAlign: TextAlign.center,
-                          style: titleStyle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        );
-
-                        // Para centrar el título visualmente aunque el logo quede
-                        // a la izquierda, usamos dos variantes:
-                        // - en anchos estrechos: columna (logo encima)
-                        // - en anchos amplios: fila con placeholder derecho
-                        return isNarrow
-                            ? Column(
-                                children: [
-                                  logoWidget,
-                                  const SizedBox(height: 8),
-                                  topLine,
-                                  const SizedBox(height: 2),
-                                  bottomLine,
-                                ],
-                              )
-                            : Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Logo fijo a la izquierda (esquina dentro del padding)
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: SizedBox(width: 56, child: logoWidget),
-                                  ),
-                                  // Título centrado en el contenedor
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      topLine,
-                                      const SizedBox(height: 2),
-                                      bottomLine,
-                                    ],
-                                  ),
-                                ],
-                              );
+                        // Mostrar sólo la imagen como encabezado (centrada)
+                        return Center(child: logoWidget);
                       },
                     ),
                   ],
