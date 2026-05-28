@@ -14,6 +14,7 @@ import '../providers/config_provider.dart';
 import '../../data/models/config_model.dart';
 import '../../../tickets/data/models/ticket_model.dart';
 import '../../../tickets/presentation/providers/ticket_provider.dart';
+import '../../../tickets/presentation/helpers/ticket_pdf_builder.dart';
 
 // ─── Constantes de diseño ────────────────────────────────────────────────────
 abstract final class _C {
@@ -273,99 +274,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
       );
     }
 
-    final pdf  = pw.Document();
-    const mmPt = PdfPageFormat.mm;
-
-    final logoData  = await rootBundle.load('assets/images/marcaDeAgua.png');
-    final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
-    // Cargar fuente Story Script para encabezado del ticket (PDF)
-    final storyData = await rootBundle.load('assets/fonts/StoryScript-Regular.ttf');
-    final storyFont = pw.Font.ttf(storyData);
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
-          pageTheme: pw.PageTheme(
-          pageFormat: PdfPageFormat(80 * mmPt, double.infinity, marginAll: 8 * mmPt),
-          buildBackground: (context) => pw.FullPage(
-            ignoreMargins: true,
-            child: pw.Center(
-              child: pw.LayoutBuilder(
-                builder: (ctx, constraints) => pw.Opacity(
-                  opacity: 0.18,
-                  child: pw.Image(logoImage, width: math.min(160.0, constraints?.maxWidth ?? 160.0)),
-                ),
-              ),
-            ),
-          ),
-        ),
-        build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
-          children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              children: [
-                pw.SizedBox(
-                  width: 44, height: 44,
-                  child: pw.Image(logoImage, fit: pw.BoxFit.contain),
-                ),
-                pw.SizedBox(width: 6),
-                pw.Expanded(
-                  child: pw.Text(
-                    'CENTRO RECREACIONAL TURISTICO "EL PARAISO DE ANDAHUASI"',
-                    style: pw.TextStyle(font: storyFont, fontSize: 13),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 2),
-            pw.Text('Boleteria', style: const pw.TextStyle(fontSize: 10)),
-            pw.SizedBox(height: 4),
-            divider(),
-            pw.SizedBox(height: 2),
-            pdfRow('NRO. TICKET:', '#${ticket.ticketId.toString().padLeft(4, '0')}'),
-            pw.SizedBox(height: 2),
-            pdfRow('FECHA:', fmtFecha.format(ticket.hora)),
-            pw.SizedBox(height: 2),
-            pdfRow('HORA:', fmtHora.format(ticket.hora)),
-            pw.SizedBox(height: 2),
-            divider(),
-            pw.SizedBox(height: 2),
-            if (ticket.adultos > 0)
-              pdfRow(
-                'Adultos S/${precioAdulto.toStringAsFixed(2)} (x${ticket.adultos})',
-                'S/ ${(ticket.adultos * precioAdulto).toStringAsFixed(2)}',
-              ),
-            if (ticket.ninos > 0) ...[
-              pw.SizedBox(height: 2),
-              pdfRow(
-                'Niños S/${precioNino.toStringAsFixed(2)} (x${ticket.ninos})',
-                'S/ ${(ticket.ninos * precioNino).toStringAsFixed(2)}',
-              ),
-            ],
-            pw.Divider(thickness: 0.5, height: 2),
-            pw.SizedBox(height: 2),
-            pdfRow('TOTAL:', 'S/ ${ticket.monto.toStringAsFixed(2)}',
-                bold: true, fontSize: 16),
-            pw.SizedBox(height: 4),
-            pdfRow('Pago:', TicketModel.formatearParte(partesPago[0])),
-            if (partesPago.length > 1) ...[
-              pw.SizedBox(height: 2),
-              pdfRow('', TicketModel.formatearParte(partesPago[1])),
-            ],
-            pw.SizedBox(height: 8),
-            divider(),
-            pw.SizedBox(height: 6),
-            pw.Text('Gracias por su visita!',
-                style: const pw.TextStyle(fontSize: 10)),
-          ],
-        ),
-      ),
-    );
-
+    // Use shared PDF builder so impresión desde Historial coincida exactamente
+    // con la salida de impresión principal.
     try {
-      final pdfBytes = await pdf.save();
       if (nombreImpresora.isNotEmpty) {
         final impresoras = await Printing.listPrinters();
         final impresora  = impresoras.firstWhere(
@@ -374,11 +285,40 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
         );
         await Printing.directPrintPdf(
           printer:  impresora,
-          onLayout: (_) async => pdfBytes,
+          onLayout: (PdfPageFormat format) async {
+            final pdf = await buildTicketPdfFromValues(
+              adultos: ticket.adultos,
+              ninos: ticket.ninos,
+              precioAdulto: precioAdulto,
+              precioNino: precioNino,
+              total: ticket.monto,
+              fecha: fmtFecha.format(ticket.hora),
+              hora: fmtHora.format(ticket.hora),
+              metodoPago: ticket.metodoPago,
+              nroTicket: '#${ticket.ticketId.toString().padLeft(4, '0')}',
+              pageFormat: format,
+            );
+            return pdf.save();
+          },
         );
       } else {
-        await Printing.layoutPdf(onLayout: (_) async => pdfBytes);
+        await Printing.layoutPdf(onLayout: (PdfPageFormat format) async {
+          final pdf = await buildTicketPdfFromValues(
+            adultos: ticket.adultos,
+            ninos: ticket.ninos,
+            precioAdulto: precioAdulto,
+            precioNino: precioNino,
+            total: ticket.monto,
+            fecha: fmtFecha.format(ticket.hora),
+            hora: fmtHora.format(ticket.hora),
+            metodoPago: ticket.metodoPago,
+            nroTicket: '#${ticket.ticketId.toString().padLeft(4, '0')}',
+            pageFormat: format,
+          );
+          return pdf.save();
+        });
       }
+
       if (mounted) _showSnack('Ticket reimpreso correctamente');
     } catch (e) {
       if (mounted) _showSnack('Error al reimprimir: $e', bg: Colors.red.shade600);
