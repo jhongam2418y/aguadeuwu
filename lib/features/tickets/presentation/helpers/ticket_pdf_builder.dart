@@ -65,12 +65,14 @@ Future<pw.Document> buildTicketPdfFromValues({
         children: [
           pw.LayoutBuilder(builder: (ctx, constraints) {
             final maxW = constraints?.maxWidth ?? 200.0;
-            // Usar 100% del ancho disponible para el logo.
-            final logoW = maxW;
-            return pw.Center(child: pw.Image(logoImage, width: logoW));
+            // Reducir un poco el logo respecto al ancho total y añadir
+            // un padding vertical para separar del resto del contenido.
+            final logoW = maxW * 0.85;
+            return pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 6),
+              child: pw.Center(child: pw.Image(logoImage, width: logoW)),
+            );
           }),
-
-          pw.SizedBox(height: 0),
 
           pdfRow('NRO. TICKET:', nroTicket),
           pw.SizedBox(height: 1),

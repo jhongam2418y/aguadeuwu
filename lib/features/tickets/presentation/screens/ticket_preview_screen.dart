@@ -618,13 +618,18 @@ class _TicketCard extends StatelessWidget {
                         LayoutBuilder(
                       builder: (context, constraints) {
                         final logoWidget = ColorFiltered(
-                          colorFilter: const ColorFilter.mode(
-                              Colors.black87, BlendMode.srcIn),
-                          // Aumentar la altura del logo para una vista previa más prominente
-                          child: Image.asset('assets/images/marcaDeAgua.png', height: 200),
+                          colorFilter: const ColorFilter.mode(Colors.black87, BlendMode.srcIn),
+                          child: Image.asset(
+                            'assets/images/marcaDeAgua.png',
+                            height: 150,
+                            fit: BoxFit.contain,
+                            alignment: Alignment.topCenter,
+                          ),
                         );
-                        // Mostrar sólo la imagen como encabezado (alineada arriba)
-                        return Align(alignment: Alignment.topCenter, child: logoWidget);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Align(alignment: Alignment.topCenter, child: logoWidget),
+                        );
                       },
                     ),
                   ],
@@ -635,7 +640,7 @@ class _TicketCard extends StatelessWidget {
               // Fecha / Hora / Tipo
               Padding(
                 // Reducimos el padding superior para acercar el contenido al título
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+                padding: const EdgeInsets.fromLTRB(6, 0, 8, 4),
                 child: Column(
                   children: [
                     const _TicketRow(label: 'NRO. TICKET:', value: 'PENDIENTE'),
