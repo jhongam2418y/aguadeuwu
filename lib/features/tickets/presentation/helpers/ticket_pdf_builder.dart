@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -28,13 +27,14 @@ Future<pw.Document> buildTicketPdfFromValues({
   final logoData = await rootBundle.load('assets/images/marcaDeAgua.png');
   final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
 
+  // Usar márgenes mínimos para que el logo pueda ocupar más espacio horizontal.
   final pageFmt = pageFormat ?? PdfPageFormat(
     80 * mmPt,
     double.infinity,
-    marginLeft: 2 * mmPt,
-    marginRight: 2 * mmPt,
-    marginTop: 2 * mmPt,
-    marginBottom: 4 * mmPt,
+    marginLeft: 0 * mmPt,
+    marginRight: 0 * mmPt,
+    marginTop: 0 * mmPt,
+    marginBottom: 2 * mmPt,
   );
 
   pw.Widget pdfRow(String label, String value,
@@ -65,7 +65,8 @@ Future<pw.Document> buildTicketPdfFromValues({
         children: [
           pw.LayoutBuilder(builder: (ctx, constraints) {
             final maxW = constraints?.maxWidth ?? 200.0;
-            final logoW = math.min(maxW * 0.6, 80.0);
+            // Usar 100% del ancho disponible para el logo.
+            final logoW = maxW;
             return pw.Center(child: pw.Image(logoImage, width: logoW));
           }),
 

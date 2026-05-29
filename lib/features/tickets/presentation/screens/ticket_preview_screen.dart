@@ -620,7 +620,8 @@ class _TicketCard extends StatelessWidget {
                         final logoWidget = ColorFiltered(
                           colorFilter: const ColorFilter.mode(
                               Colors.black87, BlendMode.srcIn),
-                          child: Image.asset('assets/images/marcaDeAgua.png', height: 110),
+                          // Aumentar la altura del logo para una vista previa más prominente
+                          child: Image.asset('assets/images/marcaDeAgua.png', height: 200),
                         );
                         // Mostrar sólo la imagen como encabezado (alineada arriba)
                         return Align(alignment: Alignment.topCenter, child: logoWidget);
