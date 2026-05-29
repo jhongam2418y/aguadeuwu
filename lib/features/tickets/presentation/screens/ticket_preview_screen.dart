@@ -639,8 +639,8 @@ class _TicketCard extends StatelessWidget {
 
               // Fecha / Hora / Tipo
               Padding(
-                // Reducimos el padding superior para acercar el contenido al título
-                padding: const EdgeInsets.fromLTRB(6, 0, 8, 4),
+                // Aumentar ligeramente el padding superior (2px) entre título y contenido
+                padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
                 child: Column(
                   children: [
                     const _TicketRow(label: 'NRO. TICKET:', value: 'PENDIENTE'),
