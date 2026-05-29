@@ -246,7 +246,7 @@ class _LeftPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const _SectionLabel(texto: 'SELECCIONE CANTIDAD'),
-          const SizedBox(height: 10),
+          const SizedBox(height: 4),
           Expanded(
             child: _ContadorCard(
               label: 'Adultos',
@@ -1248,7 +1248,7 @@ class _TicketPreviewCard extends StatelessWidget {
           // Pie: pago y fecha
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 4),
             color: const Color(0xFFF8F9FA),
             child: Column(
               children: [

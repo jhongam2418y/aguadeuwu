@@ -69,11 +69,13 @@ Future<pw.Document> buildTicketPdfFromValues({
             // un padding vertical para separar del resto del contenido.
             final logoW = maxW * 0.85;
             return pw.Padding(
-              // Aumentar 2 unidades el padding vertical entre logo y contenido (6 -> 8)
-              padding: const pw.EdgeInsets.symmetric(vertical: 7),
+              // Reducir padding vertical para empatar con preview
+              padding: const pw.EdgeInsets.symmetric(vertical: 4),
               child: pw.Center(child: pw.Image(logoImage, width: logoW)),
             );
           }),
+          // Espacio estre (pequeño) entre el logo y la primera fila (NRO. TICKET)
+          pw.SizedBox(height: 12),
 
           pdfRow('NRO. TICKET:', nroTicket),
           pw.SizedBox(height: 1),

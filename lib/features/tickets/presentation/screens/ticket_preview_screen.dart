@@ -627,7 +627,7 @@ class _TicketCard extends StatelessWidget {
                           ),
                         );
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Align(alignment: Alignment.topCenter, child: logoWidget),
                         );
                       },
@@ -635,12 +635,10 @@ class _TicketCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Divider(thickness: 0.5, height: 0, indent: 16, endIndent: 16, color: Colors.grey.shade300),
-
               // Fecha / Hora / Tipo
               Padding(
-                // Aumentar ligeramente el padding superior (2px) entre título y contenido
-                padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
+                // Añadir más espacio entre logo/título y la sección de filas
+                padding: const EdgeInsets.fromLTRB(8, 12, 8, 2),
                 child: Column(
                   children: [
                     const _TicketRow(label: 'NRO. TICKET:', value: 'PENDIENTE'),
@@ -711,7 +709,7 @@ class _TicketCard extends StatelessWidget {
 
               // Gracias
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
                   'GRACIAS POR SU VISITA!',
                   textAlign: TextAlign.center,
