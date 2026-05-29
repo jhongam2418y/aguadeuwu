@@ -88,7 +88,7 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
   // ── PDF ────────────────────────────────────────────────────────────────────
 
   Future<pw.Document> _buildPdf([PdfPageFormat? pageFormat]) async {
-    final partesPago = _metodoPago.split('+');
+    // partesPago se calcula en el builder compartido; no es necesario aquí
 
     // Número de ticket — disponible solo tras guardar
     String nroTicket = 'S/N';
@@ -239,8 +239,8 @@ class _TicketPreviewScreenState extends State<TicketPreviewScreen> {
                           child: Center(
                               child: SingleChildScrollView(
                               // Eliminamos padding exterior vertical para acercar el ticket
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 36, vertical: 0),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 0),
                               child: LayoutBuilder(
                                 builder: (context, constraints) {
                                   // Ensure ticket never exceeds 340px but also
@@ -615,12 +615,12 @@ class _TicketCard extends StatelessWidget {
                     // Encabezado responsivo y balanceado: logo a la izquierda,
                     // título centrado y un placeholder a la derecha para
                     // que el título quede visualmente centrado.
-                    LayoutBuilder(
+                        LayoutBuilder(
                       builder: (context, constraints) {
                         final logoWidget = ColorFiltered(
                           colorFilter: const ColorFilter.mode(
                               Colors.black87, BlendMode.srcIn),
-                          child: Image.asset('assets/images/marcaDeAgua.png', height: 80),
+                          child: Image.asset('assets/images/marcaDeAgua.png', height: 110),
                         );
                         // Mostrar sólo la imagen como encabezado (alineada arriba)
                         return Align(alignment: Alignment.topCenter, child: logoWidget);
@@ -634,21 +634,21 @@ class _TicketCard extends StatelessWidget {
               // Fecha / Hora / Tipo
               Padding(
                 // Reducimos el padding superior para acercar el contenido al título
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
                 child: Column(
                   children: [
                     const _TicketRow(label: 'NRO. TICKET:', value: 'PENDIENTE'),
                     _TicketRow(label: 'FECHA:', value: fecha),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 4),
                     _TicketRow(label: 'HORA:', value: hora),
-                    const SizedBox(height: 7),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Builder(builder: (_) {
                       final partes = metodoPago.split('+');
                       return Column(
                         children: [
                           for (int i = 0; i < partes.length; i++) ...[
-                            if (i > 0) const SizedBox(height: 7),
+                            if (i > 0) const SizedBox(height: 4),
                             _TicketRow(
                               label: i == 0 ? 'PAGO:' : '',
                               value: TicketModel.formatearParte(partes[i]),
@@ -664,7 +664,7 @@ class _TicketCard extends StatelessWidget {
 
               // Ítems
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
                 child: Column(
                   children: [
                     if (adultos > 0)
@@ -672,7 +672,7 @@ class _TicketCard extends StatelessWidget {
                         label: 'Adultos S/${(precioAdulto)} (x$adultos) ',
                         value: 'S/ ${(adultos * precioAdulto).toStringAsFixed(2)}',
                       ),
-                    if (adultos > 0 && ninos > 0) const SizedBox(height: 7),
+                    if (adultos > 0 && ninos > 0) const SizedBox(height: 4),
                     if (ninos > 0)
                       _TicketRow(
                         label: 'Niños S/${(precioNino)} (x$ninos) ',
@@ -685,7 +685,7 @@ class _TicketCard extends StatelessWidget {
 
               // Total
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -705,7 +705,7 @@ class _TicketCard extends StatelessWidget {
 
               // Gracias
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'GRACIAS POR SU VISITA!',
                   textAlign: TextAlign.center,

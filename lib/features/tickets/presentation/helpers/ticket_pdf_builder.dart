@@ -34,7 +34,7 @@ Future<pw.Document> buildTicketPdfFromValues({
     marginLeft: 2 * mmPt,
     marginRight: 2 * mmPt,
     marginTop: 2 * mmPt,
-    marginBottom: 8 * mmPt,
+    marginBottom: 4 * mmPt,
   );
 
   pw.Widget pdfRow(String label, String value,
@@ -65,20 +65,20 @@ Future<pw.Document> buildTicketPdfFromValues({
         children: [
           pw.LayoutBuilder(builder: (ctx, constraints) {
             final maxW = constraints?.maxWidth ?? 200.0;
-            final logoW = math.min(maxW * 0.6, 90.0);
+            final logoW = math.min(maxW * 0.6, 80.0);
             return pw.Center(child: pw.Image(logoImage, width: logoW));
           }),
 
           pw.SizedBox(height: 0),
 
           pdfRow('NRO. TICKET:', nroTicket),
-          pw.SizedBox(height: 2),
+          pw.SizedBox(height: 1),
           pdfRow('FECHA:', fecha),
-          pw.SizedBox(height: 2),
+          pw.SizedBox(height: 1),
           pdfRow('HORA:', hora),
-          pw.SizedBox(height: 2),
+          pw.SizedBox(height: 1),
           pw.Divider(thickness: 0.5),
-          pw.SizedBox(height: 2),
+          pw.SizedBox(height: 1),
 
           pdfRow('Adultos S/${precioAdulto.toStringAsFixed(2)} (x$adultos)',
               'S/ ${(adultos * precioAdulto).toStringAsFixed(2)}'),
@@ -86,22 +86,22 @@ Future<pw.Document> buildTicketPdfFromValues({
             pdfRow('Niños S/${precioNino.toStringAsFixed(2)} (x$ninos)',
                 'S/ ${(ninos * precioNino).toStringAsFixed(2)}'),
 
-          pw.Divider(thickness: 0.5, height: 2),
-          pw.SizedBox(height: 2),
+          pw.Divider(thickness: 0.5, height: 1),
+          pw.SizedBox(height: 1),
 
           pdfRow('TOTAL:', 'S/ ${total.toStringAsFixed(2)}',
-              bold: true, fontSize: 16),
-          pw.SizedBox(height: 2),
+              bold: true, fontSize: 15),
+          pw.SizedBox(height: 1),
           pdfRow('Pago:', TicketModel.formatearParte(partesPago[0])),
           if (partesPago.length > 1) ...[
-            pw.SizedBox(height: 2),
+            pw.SizedBox(height: 1),
             pdfRow('', TicketModel.formatearParte(partesPago[1])),
           ],
 
-          pw.SizedBox(height: 4),
+          pw.SizedBox(height: 2),
           pw.Divider(thickness: 0.5),
-          pw.SizedBox(height: 4),
-          pw.Text('Gracias por su visita!', style: const pw.TextStyle(fontSize: 10)),
+          pw.SizedBox(height: 2),
+          pw.Text('Gracias por su visita!', style: const pw.TextStyle(fontSize: 9)),
         ],
       ),
     ),

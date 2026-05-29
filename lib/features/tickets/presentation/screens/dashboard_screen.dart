@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
@@ -708,25 +706,7 @@ class _TicketItem extends StatelessWidget {
     final nombreImpresora = cfg.nombreImpresora.trim();
     final fmtFecha   = DateFormat('dd/MM/yyyy');
     final fmtHora    = DateFormat('HH:mm');
-    final partesPago = ticket.metodoPago.split('+');
-
-    // ── Helpers PDF ───────────────────────────────────────────────────────
-    pw.Widget pdfRow(String label, String valor,
-        {bool bold = false, double fontSize = 10}) {
-      final style = bold
-          ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
-          : pw.TextStyle(fontSize: fontSize);
-      return pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Expanded(child: pw.Text(label, style: style)),
-          pw.SizedBox(width: 8),
-          pw.Expanded(
-            child: pw.Container(alignment: pw.Alignment.centerRight, child: pw.Text(valor, style: style)),
-          ),
-        ],
-      );
-    }
+    // Reimpresión usa el builder compartido en helpers/ticket_pdf_builder.dart
 
     // Use shared PDF builder so reimpresión sea idéntica a impresión.
     try {

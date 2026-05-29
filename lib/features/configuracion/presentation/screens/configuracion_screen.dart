@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -255,24 +254,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen>
     final nombreImpresora = cfg.nombreImpresora.trim();
     final fmtFecha   = DateFormat('dd/MM/yyyy');
     final fmtHora    = DateFormat('HH:mm');
-    final partesPago = ticket.metodoPago.split('+');
-
-    pw.Widget divider() => pw.Divider(thickness: 0.5);
-
-    pw.Widget pdfRow(String label, String valor,
-        {bool bold = false, double fontSize = 10}) {
-      final style = bold
-          ? pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: fontSize)
-          : pw.TextStyle(fontSize: fontSize);
-      return pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Expanded(child: pw.Text(label, style: style)),
-          pw.SizedBox(width: 8),
-          pw.Container(alignment: pw.Alignment.centerRight, child: pw.Text(valor, style: style)),
-        ],
-      );
-    }
+    // Usamos el builder compartido `buildTicketPdfFromValues`.
 
     // Use shared PDF builder so impresión desde Historial coincida exactamente
     // con la salida de impresión principal.
